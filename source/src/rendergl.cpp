@@ -999,16 +999,138 @@ float depthcorrect(float d)
 // sadly many very old cards and drivers appear to fuck up on glReadPixels() and give false
 // coordinates, making shooting and such impossible.
 // also hits map entities which is unwanted.
-// could be replaced by a more acurate version of monster.cpp los() if needed
+// could be replaced by a more accurate version of monster.cpp los() if needed.
+
+#if defined(AC_PLATFORM_IOS)
+
+// GLES2 does not provide the depth-buffer readback used by the desktop implementation.
+// Trace the crosshair ray through the map instead. This is adapted from the upstream
+// acmobile implementation (which uses the same fallback for GL4ES on Android).
+static bool ios_line_of_sight(float stepdiv, float lx, float ly, float lz,
+                              float bx, float by, float bz, vec &hit)
+{
+    if(OUTBORD((int)lx, (int)ly) || OUTBORD((int)bx, (int)by)) return false;
+
+    float dx = bx-lx, dy = by-ly;
+    int steps = (int)(sqrtf(dx*dx + dy*dy)/stepdiv);
+    if(!steps) return false;
+
+    float x = lx, y = ly;
+    int i = 0;
+    while(i < steps)
+    {
+        sqr *s = S((int)x, (int)y);
+        if(SOLID(s)) break;
+
+        float floor = s->floor;
+        if(s->type == FHF) floor -= s->vdelta/4.0f;
+        float ceil = s->ceil;
+        if(s->type == CHF) ceil += s->vdelta/4.0f;
+
+        float z = lz - ((lz-bz)*(i/(float)steps));
+        if(z < floor || z > ceil) break;
+
+        hit = vec(x, y, z);
+        x += dx/(float)steps;
+        y += dy/(float)steps;
+        ++i;
+    }
+    return i >= steps;
+}
+
+static bool ios_intersects_mapmodel(entity *e, const vec &from, const vec &to)
+{
+    mapmodelinfo *mmi = getmminfo(e->attr2);
+    if(!mmi || OUTBORD(e->x, e->y)) return false;
+
+    float z = (float)S(e->x, e->y)->floor + mmi->zoff + e->attr3 + mmi->h/2;
+    float radius = mmi->rad;
+    vec closest = to, center((float)e->x, (float)e->y, z), delta(to);
+    delta.sub(from);
+    vec offset(center);
+    offset.sub(from);
+
+    float projection = offset.dot(delta);
+    const vec *point = &from;
+    if(projection > 0)
+    {
+        float lengthSquared = delta.dot(delta);
+        if(projection >= lengthSquared) point = &to;
+        else
+        {
+            float t = projection/lengthSquared;
+            closest = delta;
+            closest.mul(t);
+            closest.add(from);
+            point = &closest;
+        }
+    }
+
+    return point->x <= center.x+radius && point->x >= center.x-radius
+        && point->y <= center.y+radius && point->y >= center.y-radius
+        && point->z <= center.z+mmi->h/2 && point->z >= center.z-mmi->h/2;
+}
+
+#endif
 
 void readdepth(int w, int h, vec &pos)
 {
+#if defined(AC_PLATFORM_IOS)
+    float yaw = player1->yaw-90, pitch = -player1->pitch;
+    float sinYaw = sinf(RAD*yaw), cosYaw = cosf(RAD*yaw);
+    float sinPitch = sinf(RAD*pitch), cosPitch = cosf(RAD*pitch);
+    vec direction(cosPitch*cosYaw, cosPitch*sinYaw, -sinPitch);
+    // Stop the ray just inside the map boundary. ios_line_of_sight() rejects
+    // out-of-bounds endpoints, so an arbitrary long endpoint would never be traced.
+    const float minCoordinate = MINBORD + 0.5f;
+    const float maxCoordinate = ssize - MINBORD - 1.0f;
+    float rayDistance = (float)ssize*2.0f;
+    if(direction.x > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.x)/direction.x);
+    else if(direction.x < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.x)/direction.x);
+    if(direction.y > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.y)/direction.y);
+    else if(direction.y < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.y)/direction.y);
+    rayDistance = max(rayDistance, 0.05f);
+
+    vec endpoint(direction);
+    endpoint.mul(rayDistance);
+    endpoint.add(player1->o);
+
+    vec hit = player1->o;
+    ios_line_of_sight(0.05f, player1->o.x, player1->o.y, player1->o.z,
+                      endpoint.x, endpoint.y, endpoint.z, hit);
+
+    direction = hit;
+    direction.sub(player1->o);
+    float horizontalDistance = sqrtf(direction.x*direction.x + direction.y*direction.y);
+    if(horizontalDistance <= 1e-4f)
+    {
+        pos = player1->o;
+        return;
+    }
+
+    direction.mul(1.0f/horizontalDistance);
+    float distance = horizontalDistance;
+    loopv(ents)
+    {
+        entity &e = ents[i];
+        if(e.type != MAPMODEL) continue;
+        vec entityOrigin((float)e.x, (float)e.y, (float)e.z);
+        float entityDistance = player1->o.dist(entityOrigin);
+        if(entityDistance < distance && ios_intersects_mapmodel(&e, player1->o, hit))
+            distance = entityDistance;
+    }
+
+    direction.mul(distance);
+    direction.add(player1->o);
+    pos = direction;
+#else
     glReadPixels(w/2, h/2, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &cursordepth);
     vec screen(0, 0, depthcorrect(cursordepth)*2 - 1);
     vec4 world;
     invmvpmatrix.transform(screen, world);
     pos = vec(world.x, world.y, world.z).div(world.w);
     intersectgeometry(camera1->o, pos);
+#endif
 }
 
 VARP(ignoreoverride_nowaterreflect, 0, 0, 1);
