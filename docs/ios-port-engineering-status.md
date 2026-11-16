@@ -31,6 +31,21 @@ The GL4ES and SDL2 workflows are dependency-build milestones, not an engine buil
 
 The next refactor should extract explicit engine lifecycle functions (initialize, process input, render one frame, suspend/resume, shutdown) from `main()`. Do not create a second SDL window on iOS. On iOS, SDL should be initialized in its iOS-supported application lifecycle or the UIKit host must own the view and context consistently.
 
+### iOS window and application lifecycle ownership
+
+A source-level check of the pinned SDL2 iOS backend establishes an important integration constraint:
+
+- SDL's UIKit video driver creates its own `SDL_uikitwindow` / `UIWindow` and controller when `SDL_CreateWindow` is called.
+- The SDL UIKit backend explicitly permits only one SDL window per display.
+- SDL's iOS entry point (`SDL_UIKitRunApp`) owns `UIApplicationMain` and forwards control to `SDL_main`.
+- AssaultCube's existing `main.cpp` already creates an SDL window and GL context, then initializes GL4ES against SDL's GL procedure resolver. Its main loop is a persistent frame loop that polls SDL events, updates the world, renders, and swaps the SDL window.
+
+This means the current prototype architecture has a real ownership conflict: `EngineViewController.swift` creates a separate UIKit `GLKView` / EAGL context, while the AssaultCube engine expects SDL to create and own its window and context. Simply calling the current engine `main()` from `EngineBridge` would create a second rendering context/window rather than render into the existing GLKView.
+
+**Integration rule:** do not connect the current placeholder bridge to `main()` as-is. The iOS application must have one authoritative owner for the UIKit window and OpenGL ES context. The preferred route to preserve the existing SDL event/render pipeline is to let SDL's UIKit backend own the game window and context, then adapt the game-data import experience to that host. An alternative is a deeper SDL video-backend adaptation that lets SDL render into a host-owned UIKit view; that requires explicit proof that the iOS backend supports external-view binding and must not be assumed from `SDL_CreateWindowFrom`.
+
+The current SwiftUI data-import shell and GLKView prototype should therefore be treated as scaffolding, not the final application root. The next lifecycle refactor should separate engine initialization, one-frame execution, pause/resume, and shutdown while preserving the desktop entry point. It must also ensure SDL's iOS application bootstrap is used exactly once and that no second `UIApplicationMain`, `UIWindow`, or GL context is created.
+
 ### Renderer
 
 `source/src/rendergl.cpp` uses desktop fixed-function OpenGL calls. OpenGL ES 2.0 does not provide the legacy immediate-mode API and matrix stack. Including `SDL_opengles2.h` alone cannot make this renderer compile or work.
@@ -59,12 +74,13 @@ The import package stores data at Documents/GameData. The engine's VFS, config, 
 
 1. Verify the first GL4ES and SDL2 ARM64 iOS dependency builds and correct any toolchain or packaging failures.
 2. Build the remaining iOS dependencies: SDL2_image, Ogg/Vorbis, ENet and the selected audio backend; use the iOS SDK zlib rather than desktop library flags.
-3. Add an actual Xcode engine target that compiles and links the native ARM64 C/C++ sources and the verified dependencies.
-4. Refactor the engine entry point into callable lifecycle/frame functions without breaking desktop builds.
-5. Select and implement the renderer migration. This is the largest source-code task.
-6. Connect UIKit touch and GameController events to the engine's platform-neutral input actions.
-7. Configure VFS/data/config paths and test loading a real map.
-8. Verify audio and networking, then test on physical iPhone hardware.
+3. Resolve the single-owner SDL/UIKit window and context architecture before wiring the app bridge.
+4. Add an actual Xcode engine target that compiles and links the native ARM64 C/C++ sources and the verified dependencies.
+5. Refactor the engine entry point into callable lifecycle/frame functions without breaking desktop builds.
+6. Select and implement the renderer migration. This is the largest source-code task.
+7. Connect UIKit touch and GameController events to the engine's platform-neutral input actions.
+8. Configure VFS/data/config paths and test loading a real map.
+9. Verify audio and networking, then test on physical iPhone hardware.
 
 ## Acceptance criteria for calling it playable
 
