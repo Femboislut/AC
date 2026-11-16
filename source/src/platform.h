@@ -43,15 +43,17 @@
 #endif
 
 #if defined(TARGET_OS_IOS) && TARGET_OS_IOS
+    // Keep SDL's platform, event, and image APIs available: the existing engine
+    // uses SDL types throughout. Only the OpenGL headers differ on iOS.
     #define AC_PLATFORM_IOS 1
-    #include <OpenGLES/ES2/gl.h>
-    #include <OpenGLES/ES2/glext.h>
+    #include <SDL.h>
+    #include <SDL_image.h>
+    #include <SDL_opengles2.h>
     #include <OpenAL/al.h>
     #include <OpenAL/alc.h>
-    #include <vorbis/vorbisfile.h>
-    #ifndef MOD_KEYS_CTRL
-        #define MOD_KEYS_CTRL 0
-    #endif
+    #include "Vorbis/vorbisfile.h"
+    #define MOD_KEYS_CTRL (KMOD_LGUI|KMOD_RGUI)
+    #include <setjmp.h>
 #else
 #ifndef STANDALONE
     #include <SDL.h>
