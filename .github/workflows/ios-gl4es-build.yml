@@ -2,23 +2,10 @@ name: iOS GL4ES static library
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ios/feasibility-audit
-      - ios/port-build-infra
-    paths:
-      - ".github/workflows/ios-gl4es-build.yml"
-      - ".gitmodules"
-      - "ios/**"
-      - "source/src/**"
-  pull_request:
-    paths:
-      - ".github/workflows/ios-gl4es-build.yml"
-      - ".gitmodules"
-      - "ios/**"
-      - "source/src/platform.h"
-      - "source/src/main.cpp"
-      - "source/src/rendergl.cpp"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read

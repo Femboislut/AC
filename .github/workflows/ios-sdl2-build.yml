@@ -2,19 +2,10 @@ name: iOS SDL2 static libraries
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ios/port-build-infra
-      - ios/feasibility-audit
-    paths:
-      - ".github/workflows/ios-sdl2-build.yml"
-      - "ios/**"
-      - "source/**"
-  pull_request:
-    paths:
-      - ".github/workflows/ios-sdl2-build.yml"
-      - "ios/**"
-      - "source/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read

@@ -6,12 +6,20 @@ on:
     branches:
       - ios/port-build-infra
     paths:
-      - "ios/**"
+      - "ios/AssaultCubeData/**"
+      - "ios/AssaultCubeApp/**"
+      - "ios/project.yml"
       - ".github/workflows/ios-build.yml"
   pull_request:
     paths:
-      - "ios/**"
+      - "ios/AssaultCubeData/**"
+      - "ios/AssaultCubeApp/**"
+      - "ios/project.yml"
       - ".github/workflows/ios-build.yml"
+
+concurrency:
+  group: ios-app-shell-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read

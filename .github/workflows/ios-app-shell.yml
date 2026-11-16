@@ -3,14 +3,10 @@ name: iOS app shell scaffold
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-app-shell.yml"
-  pull_request:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-app-shell.yml"
+
+concurrency:
+  group: ios-shell-validation-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   shell-validation:
