@@ -7,7 +7,7 @@ This directory contains the native iOS data-import prototype and early engine-ho
 - The SwiftUI data importer validates and stores imported AssaultCube game data.
 - The GLKit/Objective-C++ bridge is only a placeholder; it does not start the C++ engine.
 - The existing engine still owns its SDL startup, event loop, rendering and buffer presentation in `source/src/main.cpp`.
-- The renderer still uses desktop fixed-function OpenGL and reads the depth buffer for crosshair targeting.
+- The renderer still uses desktop fixed-function OpenGL; an iOS-only raycast fallback now replaces depth-buffer readback for crosshair targeting, but it has not yet been compiled or tested.
 - No ARM64 iOS engine build or physical-device gameplay test has succeeded.
 
 ## Recommended implementation direction
