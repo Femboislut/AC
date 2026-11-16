@@ -8,8 +8,8 @@ on:
     paths:
       - ".github/workflows/ios-gl4es-build.yml"
       - ".gitmodules"
-      - "ios/third_party/gl4es"
-      - "source/src/platform.h"
+      - "ios/**"
+      - "source/src/**"
   pull_request:
     paths:
       - ".github/workflows/ios-gl4es-build.yml"
