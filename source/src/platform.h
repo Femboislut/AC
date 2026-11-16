@@ -55,7 +55,7 @@
     #include <gl4esinit.h>
     #include <OpenAL/al.h>
     #include <OpenAL/alc.h>
-    #include "Vorbis/vorbisfile.h"
+    #include <vorbis/vorbisfile.h>
     #define MOD_KEYS_CTRL (KMOD_LGUI|KMOD_RGUI)
     #include <setjmp.h>
 #else

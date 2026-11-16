@@ -9,6 +9,7 @@ set(AC_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." CACHE PATH "Path to the AssaultCub
 set(AC_IOS_DEPS_DIR "${CMAKE_CURRENT_LIST_DIR}/../Dependencies" CACHE PATH "Directory containing the extracted iOS dependency artifact")
 
 set(AC_SDL_INCLUDE "${AC_IOS_DEPS_DIR}/SDL2/include")
+set(AC_SDL_CONFIG_INCLUDE "${AC_SDL_INCLUDE}/SDL2")
 set(AC_GL4ES_INCLUDE "${AC_IOS_DEPS_DIR}/GL4ES/include")
 set(AC_AUDIO_INCLUDE "${AC_IOS_DEPS_DIR}/Audio/include")
 
@@ -26,7 +27,7 @@ foreach(AC_REQUIRED_FILE IN LISTS AC_REQUIRED_FILES)
     endif()
 endforeach()
 
-foreach(AC_REQUIRED_DIR IN ITEMS "${AC_SDL_INCLUDE}" "${AC_GL4ES_INCLUDE}" "${AC_AUDIO_INCLUDE}" "${AC_ROOT}/source/enet/include")
+foreach(AC_REQUIRED_DIR IN ITEMS "${AC_SDL_INCLUDE}" "${AC_SDL_CONFIG_INCLUDE}" "${AC_GL4ES_INCLUDE}" "${AC_AUDIO_INCLUDE}" "${AC_ROOT}/source/enet/include")
     if(NOT IS_DIRECTORY "${AC_REQUIRED_DIR}")
         message(FATAL_ERROR "Missing iOS include directory: ${AC_REQUIRED_DIR}")
     endif()
@@ -130,6 +131,7 @@ target_include_directories(AssaultCubeEngine PUBLIC
     "${AC_ROOT}/source/include"
     "${AC_ROOT}/source/enet/include"
     "${AC_SDL_INCLUDE}"
+    "${AC_SDL_CONFIG_INCLUDE}"
     "${AC_GL4ES_INCLUDE}"
     "${AC_AUDIO_INCLUDE}"
 )

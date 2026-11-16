@@ -101,7 +101,7 @@ jobs:
           cp build/install/lib/libvorbisfile.a build/package/Audio/lib/
           cp build/install/lib/libvorbisenc.a build/package/Audio/lib/
           cp -R build/install/include/ogg build/package/Audio/include/
-          cp -R build/install/include/vorbis build/package/Audio/include/Vorbis/
+          cp -R build/install/include/vorbis build/package/Audio/include/vorbis/
       - name: Build GL4ES for arm64 iOS
         run: |
           set -euo pipefail
