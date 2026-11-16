@@ -93,12 +93,13 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/install" \
             -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/install" \
             -DBUILD_SHARED_LIBS=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
-          cmake --build build/vorbis --config Release --target vorbis vorbisfile
+          cmake --build build/vorbis --config Release --target vorbis vorbisenc vorbisfile
           cmake --install build/vorbis --config Release
           mkdir -p build/package/Audio/lib build/package/Audio/include
           cp build/install/lib/libogg.a build/package/Audio/lib/
           cp build/install/lib/libvorbis.a build/package/Audio/lib/
           cp build/install/lib/libvorbisfile.a build/package/Audio/lib/
+          cp build/install/lib/libvorbisenc.a build/package/Audio/lib/
           cp -R build/install/include/ogg build/package/Audio/include/
           cp -R build/install/include/vorbis build/package/Audio/include/Vorbis/
       - name: Build GL4ES for arm64 iOS
@@ -122,6 +123,7 @@ jobs:
           test -f build/package/Audio/lib/libogg.a
           test -f build/package/Audio/lib/libvorbis.a
           test -f build/package/Audio/lib/libvorbisfile.a
+          test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
       - name: Upload combined dependency artifact
         uses: actions/upload-artifact@v4
