@@ -163,12 +163,13 @@ public struct GameDataStore: Sendable {
             for entry in archive {
                 count += 1
                 let path = entry.path
+                let entrySize = UInt64(entry.uncompressedSize)
                 guard count <= Self.maximumArchiveEntries,
-                      entry.uncompressedSize <= Self.maximumArchiveBytes,
-                      expanded <= Self.maximumArchiveBytes - entry.uncompressedSize else {
+                      entrySize <= Self.maximumArchiveBytes,
+                      expanded <= Self.maximumArchiveBytes - entrySize else {
                     throw GameDataError.archiveTooLarge
                 }
-                expanded += entry.uncompressedSize
+                expanded += entrySize
                 guard isSafeArchivePath(path), entry.type != .symlink else {
                     throw GameDataError.unsafeArchiveEntry(path)
                 }
