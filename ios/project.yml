@@ -1,0 +1,31 @@
+name: AssaultCube
+options:
+  bundleIdPrefix: net.cubers
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+packages:
+  AssaultCubeData:
+    path: AssaultCubeData
+
+targets:
+  AssaultCube:
+    type: application
+    platform: iOS
+    sources:
+      - path: AssaultCubeApp/AssaultCubeDataApp.swift
+    dependencies:
+      - package: AssaultCubeData
+    info:
+      path: AssaultCubeApp/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.ios
+        PRODUCT_NAME: AssaultCube
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
