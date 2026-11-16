@@ -67,6 +67,11 @@ jobs:
       - name: Validate iOS engine source list against desktop client manifest
         run: python3 scripts/validate-ios-engine-source-list.py
 
+      - name: Verify iOS platform compile definition
+        run: |
+          set -euo pipefail
+          grep -Fq 'target_compile_definitions(AssaultCubeEngine PUBLIC AC_PLATFORM_IOS=1)' ios/Engine/CMakeLists.txt
+          grep -Fq '#if defined(AC_PLATFORM_IOS)' source/src/main.cpp
       - name: Build SDL2 for arm64 iOS
         run: |
           set -euo pipefail
