@@ -136,7 +136,7 @@ target_include_directories(AssaultCubeEngine PUBLIC
     "${AC_AUDIO_INCLUDE}"
 )
 target_compile_features(AssaultCubeEngine PUBLIC cxx_std_11)
-target_compile_options(AssaultCubeEngine PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-fsigned-char;-fno-rtti;-fno-exceptions>")
+# Match the upstream client Makefile: signed char is required, while RTTI and\n# exception behavior should retain the compiler defaults unless iOS proves otherwise.\ntarget_compile_options(AssaultCubeEngine PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-fsigned-char>")
 set_target_properties(AssaultCubeEngine PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
 find_library(AC_ZLIB z REQUIRED)
