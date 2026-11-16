@@ -38,6 +38,17 @@
     #define NO_POSIX_R
 #endif
 
+#if defined(TARGET_OS_IOS) && TARGET_OS_IOS
+    #define AC_PLATFORM_IOS 1
+    #include <OpenGLES/ES2/gl.h>
+    #include <OpenGLES/ES2/glext.h>
+    #include <OpenAL/al.h>
+    #include <OpenAL/alc.h>
+    #include <vorbis/vorbisfile.h>
+    #ifndef MOD_KEYS_CTRL
+        #define MOD_KEYS_CTRL 0
+    #endif
+#else
 #ifndef STANDALONE
     #include <SDL.h>
     #include <SDL_image.h>
@@ -45,7 +56,7 @@
     #ifdef __APPLE__
         #undef SDL_VIDEO_DRIVER_WINDOWS
     #endif
-	#include <SDL_syswm.h>
+    #include <SDL_syswm.h>
 
     #define GL_GLEXT_LEGACY
     #define __glext_h__
@@ -68,6 +79,7 @@
     #endif
 
     #include <setjmp.h>
+#endif
 #endif
 
 #if defined(WIN32) || defined(__APPLE__) || !defined(STANDALONE) || defined(AC_FORCE_SDL_THREADS)
