@@ -1,0 +1,31 @@
+# .github/workflows/ios-app-shell.yml
+name: iOS app shell scaffold
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-app-shell.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-app-shell.yml"
+
+jobs:
+  shell-validation:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Validate app-shell files
+        run: |
+          test -f ios/AssaultCubeApp/AppDelegate.swift
+          test -f ios/AssaultCubeApp/SceneDelegate.swift
+          test -f ios/AssaultCubeApp/EngineViewController.swift
+          test -f ios/AssaultCubeApp/Info.plist
+          test -f ios/AssaultCubeEngine/EngineBridge.h
+          test -f ios/AssaultCubeEngine/EngineBridge.mm
