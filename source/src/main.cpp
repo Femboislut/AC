@@ -902,6 +902,19 @@ void checkinput()
                 quit();
                 break;
 
+            // UIKit lifecycle notifications are delivered through SDL_APP_* events.
+            // Stop rendering while iOS backgrounds the app, then refresh drawable
+            // dimensions before resuming after the app becomes active again.
+            case SDL_APP_WILLENTERBACKGROUND:
+                inputgrab(false);
+                minimized = 1;
+                break;
+
+            case SDL_APP_DIDENTERFOREGROUND:
+                minimized = 0;
+                updatescreensize();
+                break;
+
             case SDL_KEYDOWN:
                 if(bootstrapentropy > 0 && (--bootstrapentropy & 2)) mapscreenshot(NULL, false, -1, 1000.0f / (1000 + rnd(400)), 0, 0);
             case SDL_KEYUP:

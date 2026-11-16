@@ -117,3 +117,8 @@ The target is a build scaffold, not a successful compile. Its first configure/bu
 ### Native source and bootstrap audit
 
 See [the native iOS engine build-target audit](../docs/ios-native-engine-build-audit.md) for verification of the 53-file current client source list, iOS platform-header selection, ENet POSIX source selection, SDL UIKit bootstrap and outstanding compile-time uncertainties.
+
+
+## Application lifecycle
+
+The SDL UIKit lifecycle event path and current engine handling are documented in [the iOS lifecycle audit](../docs/ios-application-lifecycle-audit.md). Background/foreground events now suppress rendering and refresh drawable dimensions on resume; device validation and GL/audio recovery remain outstanding.
