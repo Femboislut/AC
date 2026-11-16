@@ -104,3 +104,9 @@ Do not make the engine depend on the Windows executable or Windows DLLs. Only th
 - The renderer still expects desktop fixed-function OpenGL behavior; GL4ES integration and the iOS raycast fallback are source-only and unvalidated.
 - The existing SwiftUI app is a data-management shell, not the final SDL game host.
 - No ARM64 iOS engine build or physical-device gameplay test has succeeded yet.
+
+### 2A. Native engine target scaffold
+
+`ios/Engine/CMakeLists.txt` now defines a static `AssaultCubeEngine` target from the **current** `source/src/Makefile` client object list and compiles ENet from the repository's C sources. It imports SDL2/SDL2main, GL4ES and Ogg/Vorbis static libraries from an extracted `ios/Dependencies` directory, and links the iOS zlib, OpenAL and OpenGLES SDK libraries. It deliberately does not import the older Android JNI wrapper or Android-only libraries.
+
+The target is a build scaffold, not a successful compile. Its first configure/build must verify SDL2 header layout, GL4ES output location, the Ogg/Vorbis header package layout, Apple framework linkage, and whether the engine sources need additional iOS-specific compile definitions. The SDL2_image include was removed from the iOS branch of `platform.h`: the current engine's only `IMG_Load()` call is already excluded under `__APPLE__`, so SDL2_image is not needed by this iOS source path.

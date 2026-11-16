@@ -47,7 +47,7 @@
     // uses SDL types throughout. Only the OpenGL headers differ on iOS.
     #define AC_PLATFORM_IOS 1
     #include <SDL.h>
-    #include <SDL_image.h>
+    // The only IMG_Load() call is excluded on Apple platforms; SDL_image is not needed on iOS.
     // Use GL4ES's desktop-compatible OpenGL headers. They map the engine's
     // fixed-function calls to GL4ES symbols backed by the current GLES context.
     #include <GL/gl.h>
