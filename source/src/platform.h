@@ -43,8 +43,8 @@
 #endif
 
 #if defined(TARGET_OS_IOS) && TARGET_OS_IOS
-    // Keep SDL's platform, event, and image APIs available: the existing engine
-    // uses SDL types throughout. Only the OpenGL headers differ on iOS.
+    // Keep SDL's platform and event APIs available: the engine uses SDL types
+    // throughout. SDL_image is not used by the Apple startup path.
     #define AC_PLATFORM_IOS 1
     #include <SDL.h>
     // The only IMG_Load() call is excluded on Apple platforms; SDL_image is not needed on iOS.

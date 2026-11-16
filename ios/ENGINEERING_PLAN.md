@@ -112,3 +112,8 @@ Do not make the engine depend on the Windows executable or Windows DLLs. Only th
 The target is a build scaffold, not a successful compile. Its first configure/build must verify SDL2 header layout, GL4ES output location, the Ogg/Vorbis header package layout, Apple framework linkage, and whether the engine sources need additional iOS-specific compile definitions. The SDL2_image include was removed from the iOS branch of `platform.h`: the current engine's only `IMG_Load()` call is already excluded under `__APPLE__`, so SDL2_image is not needed by this iOS source path.
 
 **Link-interface caveat:** SDL2 is currently imported as a raw archive, so this target explicitly propagates the iOS system frameworks normally attached by SDL's own CMake target (UIKit, Foundation, CoreGraphics, QuartzCore, CoreAudio, AudioToolbox, AVFoundation, CoreMotion, CoreVideo, OpenGLES and Metal; GameController when available). A later cleanup can replace the raw import with SDL2's exported CMake package if the installed package preserves the exact transitive link interface for this toolchain.
+
+
+### Native source and bootstrap audit
+
+See [the native iOS engine build-target audit](../docs/ios-native-engine-build-audit.md) for verification of the 53-file current client source list, iOS platform-header selection, ENet POSIX source selection, SDL UIKit bootstrap and outstanding compile-time uncertainties.
