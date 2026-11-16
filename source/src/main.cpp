@@ -2,6 +2,10 @@
 
 #include "cube.h"
 
+#if defined(AC_PLATFORM_IOS)
+static void close_ios_gl4es();
+#endif
+
 void cleanup(char *msg)         // single program exit point;
 {
     if(clientlogfile) clientlogfile->fflush();
@@ -13,6 +17,9 @@ void cleanup(char *msg)         // single program exit point;
     }
     SDL_ShowCursor(SDL_TRUE);
     SDL_SetRelativeMouseMode(SDL_FALSE);
+#if defined(AC_PLATFORM_IOS)
+    close_ios_gl4es();
+#endif
     if(msg)
     {
         #ifdef WIN32
@@ -101,6 +108,11 @@ static void gl4es_get_main_fb_size(int *width, int *height)
 {
     if(screen) SDL_GL_GetDrawableSize(screen, width, height);
     else { *width = screenw; *height = screenh; }
+}
+
+static void close_ios_gl4es()
+{
+    if(glcontext) close_gl4es();
 }
 #endif
 #define SCR_MINW 320
