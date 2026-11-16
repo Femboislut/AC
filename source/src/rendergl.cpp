@@ -1017,7 +1017,7 @@ static bool ios_line_of_sight(float stepdiv, float lx, float ly, float lz,
 
     float x = lx, y = ly;
     int i = 0;
-    for(;;)
+    while(i < steps)
     {
         sqr *s = S((int)x, (int)y);
         if(SOLID(s)) break;
