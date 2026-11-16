@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - ios/feasibility-audit
+      - ios/port-build-infra
     paths:
       - ".github/workflows/ios-gl4es-build.yml"
       - ".gitmodules"
@@ -14,8 +15,10 @@ on:
     paths:
       - ".github/workflows/ios-gl4es-build.yml"
       - ".gitmodules"
-      - "ios/third_party/gl4es"
+      - "ios/**"
       - "source/src/platform.h"
+      - "source/src/main.cpp"
+      - "source/src/rendergl.cpp"
 
 permissions:
   contents: read
@@ -23,12 +26,19 @@ permissions:
 jobs:
   build-gl4es:
     name: Build GL4ES for arm64 iOS
-    runs-on: macos-14
+    runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - name: Check out AssaultCube and GL4ES
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Show Apple build toolchain
+        run: |
+          xcodebuild -version
+          cmake --version
+          git submodule status
 
       - name: Check out pinned ios-cmake toolchain
         uses: actions/checkout@v4
