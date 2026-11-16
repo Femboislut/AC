@@ -95,6 +95,14 @@ SDL_GLContext glcontext = 0;
 
 VAR(screenw, 1, 0, 0);   // actual current resolution of screen/window
 VAR(screenh, 1, 0, 0);
+
+#if defined(AC_PLATFORM_IOS)
+static void gl4es_get_main_fb_size(int *width, int *height)
+{
+    if(screen) SDL_GL_GetDrawableSize(screen, width, height);
+    else { *width = screenw; *height = screenh; }
+}
+#endif
 #define SCR_MINW 320
 #define SCR_MINH 200
 #define SCR_MAXW 10000
@@ -559,6 +567,9 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 {
     if(glcontext)
     {
+#if defined(AC_PLATFORM_IOS)
+        close_gl4es();
+#endif
         SDL_GL_DeleteContext(glcontext);
         glcontext = NULL;
     }
@@ -600,6 +611,12 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
         0 /* try disabling everything */
     };
     int config = 0;
+#if defined(AC_PLATFORM_IOS)
+    // SDL's iOS backend creates an OpenGL ES context, not a desktop GL context.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     if(!depthbits) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
     if(!fsaa)
@@ -633,7 +650,17 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
         if(screen)
         {
             glcontext = SDL_GL_CreateContext(screen);
-            if(glcontext) break;
+            if(glcontext)
+            {
+#if defined(AC_PLATFORM_IOS)
+                // GL4ES is built without EGL and uses SDL to resolve GLES entry points
+                // and query the drawable size. The SDL-created context is current here.
+                set_getprocaddress((void *(*)(const char *))SDL_GL_GetProcAddress);
+                set_getmainfbsize(gl4es_get_main_fb_size);
+                initialize_gl4es();
+#endif
+                break;
+            }
             SDL_DestroyWindow(screen);
         }
     }
