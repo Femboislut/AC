@@ -11,7 +11,7 @@ This is a feasibility direction, not a claim that the current iOS scaffold is pl
 - Upstream `assaultcube/AC` has an `acmobile` branch with a mobile touch UI under `source/src/touch/`. Its main loop calls `checktouchinput()` when touch is enabled.
 - The OUYA port builds the same engine with SDL2 + GL4ES + OpenAL and explicitly requests an OpenGL ES 2.0 context in `setupscreen()`.
 - GL4ES documents an iOS static-library build using `ios-cmake`, `NOX11=ON`, `NOEGL=ON`, `STATICLIB=ON`, and `PLATFORM=OS`. Its iOS instructions require calling `initialize_gl4es()` after the GLES context is current.
-- There is a material graphics caveat: GL4ES documents that GLES 1.1/2.0 cannot provide the depth-buffer readback used by AssaultCube's desktop `readdepth()`. The upstream mobile branch replaces this with a world-ray/line-of-sight calculation on Android. That fallback must be adapted and tested for iOS too.
+- There is a material graphics caveat: GL4ES documents that GLES 1.1/2.0 cannot provide the depth-buffer readback used by AssaultCube's desktop `readdepth()`. An iOS-only ray/line-of-sight fallback has now been added in `source/src/rendergl.cpp`, based on the upstream mobile implementation and with bounded traversal/map-edge handling. It is still uncompiled and untested; verify crosshair targeting, map geometry, mapmodels and editing before relying on it.
 
 References:
 - Upstream mobile branch: https://github.com/assaultcube/AC/tree/acmobile
