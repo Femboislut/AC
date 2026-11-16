@@ -38,6 +38,10 @@
     #define NO_POSIX_R
 #endif
 
+#ifdef __APPLE__
+    #include <TargetConditionals.h>
+#endif
+
 #if defined(TARGET_OS_IOS) && TARGET_OS_IOS
     #define AC_PLATFORM_IOS 1
     #include <OpenGLES/ES2/gl.h>
