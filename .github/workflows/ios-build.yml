@@ -10,12 +10,6 @@ on:
       - "ios/AssaultCubeApp/**"
       - "ios/project.yml"
       - ".github/workflows/ios-build.yml"
-  pull_request:
-    paths:
-      - "ios/AssaultCubeData/**"
-      - "ios/AssaultCubeApp/**"
-      - "ios/project.yml"
-      - ".github/workflows/ios-build.yml"
 
 concurrency:
   group: ios-app-shell-${{ github.ref }}
