@@ -98,7 +98,7 @@ Do not make the engine depend on the Windows executable or Windows DLLs. Only th
 
 ## Current blockers
 
-- No iOS SDL2/GL4ES native build target is wired into this repository.
+- An iOS CMake static-engine target now exists, but it has not yet compiled; the Xcode app target does not link it.
 - `EngineBridge.mm` is a placeholder, not an engine bridge.
 - The current branch still lacks the upstream mobile touch UI; the iOS control layer is not connected yet.
 - The renderer still expects desktop fixed-function OpenGL behavior; GL4ES integration and the iOS raycast fallback are source-only and unvalidated.

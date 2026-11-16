@@ -116,6 +116,17 @@ jobs:
           cp -R ios/third_party/gl4es/include/GL build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4esinit.h build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4eshint.h build/package/GL4ES/include/
+      - name: Compile AssaultCube engine sources for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S ios/Engine -B build/engine -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DAC_IOS_DEPS_DIR="$GITHUB_WORKSPACE/build/package"
+          cmake --build build/engine --config Release --target AssaultCubeEngine
+          mkdir -p build/package/Engine/lib
+          find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ \;
+          test -f build/package/Engine/lib/libAssaultCubeEngine.a
       - name: Verify static library architectures and package
         run: |
           set -euo pipefail
@@ -123,6 +134,7 @@ jobs:
           test -f build/package/Audio/lib/libogg.a
           test -f build/package/Audio/lib/libvorbis.a
           test -f build/package/Audio/lib/libvorbisfile.a
+          test -f build/package/Engine/lib/libAssaultCubeEngine.a
           test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
       - name: Upload combined dependency artifact
