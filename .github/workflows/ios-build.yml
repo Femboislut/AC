@@ -1,18 +1,7 @@
-name: iOS unsigned app-shell IPA
+name: Manual iOS app-shell archive (not playable)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ios/port-build-infra
-    paths:
-      - "ios/AssaultCubeData/**"
-      - "ios/AssaultCubeApp/**"
-      - "ios/project.yml"
-
-concurrency:
-  group: ios-app-shell-${{ github.ref }}
-  cancel-in-progress: false
 
 permissions:
   contents: read
