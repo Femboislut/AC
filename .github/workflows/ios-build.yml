@@ -1,0 +1,92 @@
+name: iOS unsigned app-shell IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ios/port-build-infra
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  ios-shell:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Apple toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Test game-data package
+        run: swift test --package-path ios/AssaultCubeData
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate --spec project.yml
+
+      - name: Resolve Swift package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ios/AssaultCube.xcodeproj \
+            -scheme AssaultCube
+
+      - name: Build unsigned iOS archive
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild archive \
+            -project ios/AssaultCube.xcodeproj \
+            -scheme AssaultCube \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$PWD/build/AssaultCube.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | tee build-ios.log
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/AssaultCube.xcarchive/Products/Applications/AssaultCube.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          mkdir -p build/ipa/Payload
+          ditto "$APP_PATH" build/ipa/Payload/AssaultCube.app
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/ipa/Payload/AssaultCube.app/Info.plist
+          cd build/ipa
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$OLDPWD/AssaultCube-unsigned.ipa"
+          cd "$OLDPWD"
+          unzip -l AssaultCube-unsigned.ipa | grep -E "Payload/AssaultCube.app/Info.plist$"
+
+      - name: Upload unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-unsigned-IPA
+          path: AssaultCube-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-build-log
+          path: build-ios.log
+          if-no-files-found: ignore
+          retention-days: 14
