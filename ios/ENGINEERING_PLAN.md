@@ -69,6 +69,16 @@ The iOS control layer should support:
 
 The desktop `readdepth()` calls `glReadPixels(..., GL_DEPTH_COMPONENT, ...)`. GL4ES documents that GLES2 cannot provide the depth readback required by this code. An iOS-only ray/line-of-sight fallback is now present in `source/src/rendergl.cpp`, based on the upstream Android implementation and with bounded traversal near map borders. It preserves the desktop path, but has not been compiled or tested. Verify crosshair targeting against walls and mapmodels, and editor cursor placement.
 
+
+
+### 6. Native audio dependency audit
+
+AssaultCube's audio path is not just an OpenAL wrapper: source/src/openal.cpp and source/src/oggstream.cpp call libvorbisfile directly to decode and stream Ogg/Vorbis data. The repository's checked-in Ogg and Vorbis frameworks are macOS-only (their Info.plists list MacOSX as the supported platform), and the repository does not include the upstream Ogg/Vorbis C implementation sources. A real iOS link therefore needs device-built static libraries.
+
+The consolidated manual dependency workflow now checks out pinned upstream libogg v1.3.5 and libvorbis v1.3.7 sources and builds/packages libogg.a, libvorbis.a, and libvorbisfile.a for iOS ARM64 alongside SDL2 and GL4ES. The first build has not been run; no library is verified yet. Only the decoder libraries used by the game are built; the encoder library is not needed for playback.
+
+The iOS SDK's zlib and Apple's OpenAL framework are the current candidates for the remaining system dependencies, pending a real link and device test. ENet is vendored source and needs an iOS target. SDL_image is still an unresolved compile-time include/link audit: the iOS branch of platform.h includes SDL_image.h, but the checked-in SDL2_image framework is also macOS-only. Confirm all IMG_* call sites and remove the iOS include if it is truly unused, or build SDL2_image for iOS if required.
+
 ### 5. Keep the existing data importer, but make the engine consume its directory
 
 The Swift `AssaultCubeData` package can remain useful for importing and validating the user's game-data archive. The current engine already accepts `--mod=<path>` for a package/data search directory and `--home=<path>` for its writable profile. The launcher should pass absolute sandbox paths for `Documents/GameData` and `Documents/Profile`, respectively. See [docs/ios-game-data-path-audit.md](../docs/ios-game-data-path-audit.md) for the path layout and outstanding VFS checks. The runtime must receive these paths before it attempts to load fonts, maps, packages, configuration, or writable files.

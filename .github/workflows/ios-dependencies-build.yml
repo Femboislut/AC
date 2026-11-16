@@ -2,11 +2,6 @@ name: iOS ARM64 dependency build
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ios/port-build-infra
-    paths:
-      - ".github/workflows/ios-dependencies-build.yml"
 
 permissions:
   contents: read
@@ -17,30 +12,39 @@ concurrency:
 
 jobs:
   build-dependencies:
-    name: Build SDL2 and GL4ES sequentially
+    name: Build SDL2, GL4ES and Ogg/Vorbis sequentially
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Check out AssaultCube and GL4ES submodule
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
       - name: Check out pinned SDL2 source
         uses: actions/checkout@v4
         with:
           repository: libsdl-org/SDL
           ref: fe30456e94e89ef2cab50172121bffb7f7f50830
           path: SDL
-
+      - name: Check out pinned libogg source
+        uses: actions/checkout@v4
+        with:
+          repository: xiph/ogg
+          ref: e1774cd77f471443541596e09078e78fdc342e4f
+          path: libogg
+      - name: Check out pinned libvorbis source
+        uses: actions/checkout@v4
+        with:
+          repository: xiph/vorbis
+          ref: 0657aee69dec8508a0011f47f3b69d7538e9d262
+          path: libvorbis
       - name: Check out pinned iOS CMake toolchain
         uses: actions/checkout@v4
         with:
           repository: leetal/ios-cmake
           ref: b36d5bce6f9a2d11d9f144bd5882ba31cfdca420
           path: ios-cmake
-
-      - name: Verify toolchain and submodule
+      - name: Verify toolchain and source revisions
         run: |
           set -euo pipefail
           xcodebuild -version
@@ -48,43 +52,62 @@ jobs:
           git submodule status
           test -f ios/third_party/gl4es/CMakeLists.txt
           git -C SDL rev-parse HEAD
-
+          git -C libogg rev-parse HEAD
+          git -C libvorbis rev-parse HEAD
       - name: Build SDL2 for arm64 iOS
         run: |
           set -euo pipefail
           cmake -S SDL -B build/sdl2 -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
-            -DPLATFORM=OS64 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DSDL_SHARED=OFF \
-            -DSDL_STATIC=ON \
-            -DSDL_TEST=OFF \
-            -DSDL_TESTS=OFF
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_TESTS=OFF
           cmake --build build/sdl2 --config Release --target SDL2-static SDL2main
           mkdir -p build/package/SDL2/lib build/package/SDL2/include
           find build/sdl2 -type f -name 'libSDL2*.a' -exec cp {} build/package/SDL2/lib/ \;
           test -f build/package/SDL2/lib/libSDL2.a
+          test -f build/package/SDL2/lib/libSDL2main.a
           cp -R SDL/include/. build/package/SDL2/include/
-          if [ -d build/sdl2/include ]; then
-            cp -R build/sdl2/include/. build/package/SDL2/include/
-          fi
+          if [ -d build/sdl2/include ]; then cp -R build/sdl2/include/. build/package/SDL2/include/; fi
           if [ -d build/sdl2/include-config-release/SDL2 ]; then
             mkdir -p build/package/SDL2/include/SDL2
             cp -R build/sdl2/include-config-release/SDL2/. build/package/SDL2/include/SDL2/
           fi
-
+      - name: Build libogg for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S libogg -B build/ogg -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/install" \
+            -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF \
+            -DINSTALL_DOCS=OFF -DINSTALL_PKG_CONFIG_MODULE=OFF \
+            -DINSTALL_CMAKE_PACKAGE_MODULE=ON
+          cmake --build build/ogg --config Release --target ogg
+          cmake --install build/ogg --config Release
+      - name: Build libvorbis decoder for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S libvorbis -B build/vorbis -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/install" \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/install" \
+            -DBUILD_SHARED_LIBS=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          cmake --build build/vorbis --config Release --target vorbis vorbisfile
+          cmake --install build/vorbis --config Release
+          mkdir -p build/package/Audio/lib build/package/Audio/include
+          cp build/install/lib/libogg.a build/package/Audio/lib/
+          cp build/install/lib/libvorbis.a build/package/Audio/lib/
+          cp build/install/lib/libvorbisfile.a build/package/Audio/lib/
+          cp -R build/install/include/ogg build/package/Audio/include/
+          cp -R build/install/include/vorbis build/package/Audio/include/Vorbis/
       - name: Build GL4ES for arm64 iOS
         run: |
           set -euo pipefail
           cmake -S ios/third_party/gl4es -B build/gl4es -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
-            -DPLATFORM=OS64 \
-            -DNOX11=ON \
-            -DNOEGL=ON \
-            -DSTATICLIB=ON \
-            -DNO_LOADER=ON \
-            -DNO_INIT_CONSTRUCTOR=ON \
-            -DDEFAULT_ES=2
+            -DPLATFORM=OS64 -DNOX11=ON -DNOEGL=ON -DSTATICLIB=ON \
+            -DNO_LOADER=ON -DNO_INIT_CONSTRUCTOR=ON -DDEFAULT_ES=2
           cmake --build build/gl4es --config Release --target GL
           test -f ios/third_party/gl4es/lib/libGL.a
           mkdir -p build/package/GL4ES/include
@@ -92,15 +115,14 @@ jobs:
           cp -R ios/third_party/gl4es/include/GL build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4esinit.h build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4eshint.h build/package/GL4ES/include/
-
-      - name: Verify static library architectures
+      - name: Verify static library architectures and package
         run: |
           set -euo pipefail
-          xcrun lipo -info build/package/SDL2/lib/libSDL2.a
-          xcrun lipo -info build/package/GL4ES/libGL.a
-          file build/package/SDL2/lib/libSDL2.a build/package/GL4ES/libGL.a
+          find build/package -name '*.a' -print -exec xcrun lipo -info {} \;
+          test -f build/package/Audio/lib/libogg.a
+          test -f build/package/Audio/lib/libvorbis.a
+          test -f build/package/Audio/lib/libvorbisfile.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
-
       - name: Upload combined dependency artifact
         uses: actions/upload-artifact@v4
         with:

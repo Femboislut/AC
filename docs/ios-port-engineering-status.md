@@ -91,3 +91,12 @@ A successful IPA archive is not enough. The port is playable only after a physic
 The pinned SDL2 iOS source includes `src/main/uikit/SDL_uikit_main.c`, which calls `SDL_UIKitRunApp(argc, argv, SDL_main)` for the SDL-managed application entry point. SDL's `SDL_main.h` maps the engine's `main` to `SDL_main`. The current Xcode target separately declares a SwiftUI `@main` app. Those are competing process bootstraps: linking SDL2main into the SwiftUI app without redesigning the entry point is not a valid way to start the engine, and calling SDL_UIKitRunApp after SwiftUI has already started UIKit is also invalid.
 
 Before wiring the engine, select one architecture: (A) let SDL2 own the process entry point and port the importer/settings UI into UIKit screens hosted by the SDL app, or (B) keep SwiftUI as the process owner and patch SDL's UIKit backend to attach to the existing application/window/view without invoking SDL_UIKitRunApp or creating a second UIWindow/context. Option B is a larger backend integration and requires a real device proof. The current shell and engine remain intentionally disconnected until this is resolved.
+
+
+### Dependency audit update: native Ogg/Vorbis builds
+
+The old source/xcode/Frameworks/Ogg.framework and Vorbis.framework metadata declares MacOSX as the supported platform (the bundled builds are from the macOS 10.13/Xcode 9 era). They must not be linked into an iOS target. The repository contains Ogg/Vorbis headers and these macOS frameworks, but not the corresponding upstream Ogg/Vorbis C source trees. AssaultCube's audio code directly calls the Vorbisfile API (ov_open_callbacks, ov_read, ov_clear, ov_info, and seek functions), so this is a real native-link dependency.
+
+The consolidated dependency workflow now builds pinned upstream libogg v1.3.5 (commit e1774cd77f471443541596e09078e78fdc342e4f) and libvorbis v1.3.7 (commit 0657aee69dec8508a0011f47f3b69d7538e9d262) for iOS ARM64, packages the static ogg, vorbis, and vorbisfile libraries and headers, and keeps the workflow manual-only. It has not been executed; these libraries are not yet verified.
+
+The iOS SDK supplies zlib and Apple's OpenAL framework is the initial audio-backend candidate, subject to an actual device link/runtime test. ENet source is already vendored and still needs an iOS target/configuration. SDL_image also needs a call-site audit: platform.h currently includes its header in the iOS branch, while the old SDL2_image framework is macOS-only. Do not link that framework or assume the current dependency artifact includes SDL_image.
