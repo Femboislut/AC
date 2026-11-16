@@ -2,13 +2,23 @@ name: iOS ARM64 dependency build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ios/port-build-infra
+    paths:
+      - 'ios/Engine/**'
+      - 'ios/third_party/gl4es/**'
+      - 'source/src/**'
+      - 'source/enet/**'
+      - '.github/workflows/ios-dependencies-build.yml'
+      - 'scripts/validate-ios-engine-source-list.py'
 
 permissions:
   contents: read
 
 concurrency:
   group: ios-arm64-dependencies-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-dependencies:
