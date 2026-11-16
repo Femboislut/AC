@@ -1,30 +1,21 @@
 # AssaultCube iOS feasibility scaffold
 
-This directory contains a minimal iOS application scaffold to evaluate whether the desktop-oriented AssaultCube engine can be adapted to iOS.
-
-The code here is intentionally a host layer only. It does not yet contain a full engine port of AssaultCube, and it does not attempt to replace the existing SDL/OpenGL desktop build.
-
-## Purpose
-
-- Provide a starting point for an iOS runtime host.
-- Isolate the required engine-glue work from the desktop codebase.
-- Make the remaining work explicit: renderer backend adaptation, input translation, and file-system packaging.
+This directory contains an iOS host scaffold and a touch bridge for evaluating a port of the desktop-oriented AssaultCube engine.
 
 ## Current status
 
-- App shell: scaffolded
-- Native game loop bridge: stubbed
-- Desktop SDL engine: still untouched
-- iOS renderer/backend port: still required
+- UIKit/GLKit host and OpenGL ES placeholder renderer exist.
+- Native bridge accepts normalized touch samples and exposes per-frame touch snapshots.
+- The bridge is still not connected to the assaultcube game loop; touches are only captured as data.
+- The existing engine is still SDL desktop-oriented and not yet adapted to an iOS runtime lifecycle.
+- There is no full iOS build target, no packaged runtime assets, and no device validation.
 
 ## Next engineering steps
 
-1. Port the desktop renderer to OpenGL ES / Metal.
-2. Replace SDL event handling with iOS touch + motion input translation.
-3. Add packaged assets and config files to the app bundle.
-4. Build and validate on device.
-5. Move the game loop behind a native platform abstraction.
+1. Add an iOS build target and resolve SDK/platform dependencies.
+2. Replace or adapt the desktop fixed-function renderer for an iOS-supported rendering API.
+3. Connect the touch snapshot API to engine input/game actions.
+4. Adapt engine startup, pause/resume, audio, writable profile paths, and asset loading.
+5. Bundle data files and validate on a physical device.
 
-## Notes
-
-This scaffold is designed to sit beside the existing `source/src` codebase without changing the current desktop build path.
+The scaffold is not yet a playable iOS port.
