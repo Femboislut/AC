@@ -81,7 +81,7 @@ jobs:
             -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_TESTS=OFF
           cmake --build build/sdl2 --config Release --target SDL2-static SDL2main
           mkdir -p build/package/SDL2/lib build/package/SDL2/include
-          find build/sdl2 -type f -name 'libSDL2*.a' -exec cp {} build/package/SDL2/lib/ \\;
+          find build/sdl2 -type f -name 'libSDL2*.a' -exec cp {} build/package/SDL2/lib/ +
           test -f build/package/SDL2/lib/libSDL2.a
           test -f build/package/SDL2/lib/libSDL2main.a
           cp -R SDL/include/. build/package/SDL2/include/
@@ -147,15 +147,15 @@ jobs:
             -DAC_IOS_DEPS_DIR="$GITHUB_WORKSPACE/build/package"
           cmake --build build/engine --config Release --target AssaultCubeEngine
           mkdir -p build/package/Engine/lib
-          find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ \\;
-          find build/engine -type f -name 'libAC_ENET.a' -exec cp {} build/package/Engine/lib/ \\;
+          find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ +
+          find build/engine -type f -name 'libAC_ENET.a' -exec cp {} build/package/Engine/lib/ +
           test -f build/package/Engine/lib/libAssaultCubeEngine.a
           test -f build/package/Engine/lib/libAC_ENET.a
       - name: Verify static library architectures and package
         run: |
           set -euo pipefail
-          find build/package -name '*.a' -print -exec xcrun lipo -info {} \\;
           while IFS= read -r -d '' archive; do
+            xcrun lipo -info "$archive"
             echo "Verifying arm64 slice: $archive"
             xcrun lipo -verify_arch arm64 "$archive"
           done < <(find build/package -name '*.a' -print0)
