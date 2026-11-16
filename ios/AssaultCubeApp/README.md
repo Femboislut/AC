@@ -1,7 +1,11 @@
 # iOS prototype and game-data import
 
-The iOS groundwork in this branch is a SwiftUI data-management prototype. It accepts a ZIP or a folder through the system file importer, validates the same runtime layout used by this source tree (`config/font.cfg`, `packages/misc/notexture.jpg`, an official `.cgz` map, and `packages/{textures,models,audio}`), copies only `config`, `packages`, and `mods` into `Documents/GameData`, reports file count/storage, and resets only that game-data directory. Files app document sharing is enabled by `ios/AssaultCubeApp/Info.plist`.
+The current SwiftUI prototype accepts a ZIP or folder through the system file importer, validates a basic runtime layout (`config/font.cfg`, `packages/misc/notexture.jpg`, an official `.cgz` map, and `packages/{textures,models,audio}`), copies `config`, `packages`, and `mods` into `Documents/GameData`, reports file count/storage, and resets only that game-data directory.
 
-This prototype explicitly does not start the C++ engine. It is not a playable client, renderer, or deliverable IPA. The renderer and platform integration blockers are detailed in [the audit](../../docs/ios-port-audit.md). Importing files is safe from Windows binary execution: `.exe` and `.dll` files are not invoked; imported selected directories are filtered to game data roots.
+This app target does not start the C++ engine. It is a data-management shell, not a playable client, renderer, or deliverable game IPA.
 
-The SwiftUI app source is in `ios/AssaultCubeApp/AssaultCubeDataApp.swift` and uses the `AssaultCubeData` package. Integration into an Xcode iOS app target and actual on-device validation are still required.
+The native engine now has a separate CMake static-library target at `ios/Engine/CMakeLists.txt`. It is not linked into this SwiftUI target. The intended application architecture is SDL-owned UIKit startup and window/context ownership; the current SwiftUI `@main` app and GLKit host cannot simply be combined with SDL's UIKit bootstrap.
+
+Importing files does not execute Windows binaries: `.exe` and `.dll` files are not invoked. The importer selects game-data roots and copies only the supported game-data directories.
+
+See [the iOS port README](../README.md), [the engineering plan](../ENGINEERING_PLAN.md), and [the current blocker audit](../../docs/ios-port-engineering-status.md).
