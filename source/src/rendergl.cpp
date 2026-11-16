@@ -1082,11 +1082,13 @@ void readdepth(int w, int h, vec &pos)
     vec direction(cosPitch*cosYaw, cosPitch*sinYaw, -sinPitch);
     // Stop the ray just inside the map boundary. ios_line_of_sight() rejects
     // out-of-bounds endpoints, so an arbitrary long endpoint would never be traced.
+    const float minCoordinate = MINBORD + 0.5f;
+    const float maxCoordinate = ssize - MINBORD - 1.0f;
     float rayDistance = (float)ssize*2.0f;
-    if(direction.x > 1e-6f) rayDistance = min(rayDistance, (ssize-1.0f-player1->o.x)/direction.x);
-    else if(direction.x < -1e-6f) rayDistance = min(rayDistance, (1.0f-player1->o.x)/direction.x);
-    if(direction.y > 1e-6f) rayDistance = min(rayDistance, (ssize-1.0f-player1->o.y)/direction.y);
-    else if(direction.y < -1e-6f) rayDistance = min(rayDistance, (1.0f-player1->o.y)/direction.y);
+    if(direction.x > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.x)/direction.x);
+    else if(direction.x < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.x)/direction.x);
+    if(direction.y > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.y)/direction.y);
+    else if(direction.y < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.y)/direction.y);
     rayDistance = max(rayDistance, 0.05f);
 
     vec endpoint(direction);
