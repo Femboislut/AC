@@ -29,9 +29,11 @@ The iOS runtime should use SDL's iOS platform backend and its application lifecy
 
 ### 2. GL4ES is the first renderer-compatibility experiment
 
-Build GL4ES as an iOS static library for its GLES2 backend. The engine must include GL4ES's desktop-compatible GL headers for the iOS target, link the static library, create a GLES2 context, and initialize GL4ES only after that context is current.
+The repository now pins GL4ES as a submodule at `ios/third_party/gl4es`. Under `AC_PLATFORM_IOS`, `platform.h` includes GL4ES's desktop-compatible headers rather than SDL's GLES2-only headers. `main.cpp` now requests an ES 2.0 context, supplies GL4ES with SDL's procedure-address and drawable-size callbacks, initializes GL4ES after SDL creates the context, and closes GL4ES before the context is destroyed/recreated.
 
-This avoids immediately rewriting the large fixed-function renderer. It does not eliminate testing of unsupported calls, extensions, framebuffer behavior, shaders, or performance.
+The remaining work is to add the iOS native build target, compile/link GL4ES as a static library with the documented iOS options, and confirm that the initialization sequence works on device. This avoids immediately rewriting the large fixed-function renderer, but does not eliminate testing of unsupported calls, extensions, framebuffer behavior, shaders, or performance.
+
+**Validation status:** source integration only; no compile, link, simulator, or physical-device result has been verified.
 
 ### 3. Port the mobile input layer, then add iOS-specific controls
 
