@@ -139,7 +139,7 @@ target_compile_features(AssaultCubeEngine PUBLIC cxx_std_11)
 # Enable the platform-specific SDL2/GL4ES path in source/src/main.cpp.
 # Without this definition, the iOS renderer setup and lifecycle handling are compiled out.
 target_compile_definitions(AssaultCubeEngine PUBLIC AC_PLATFORM_IOS=1)
-# Match the upstream client Makefile: signed char is required, while RTTI and\n# exception behavior should retain the compiler defaults unless iOS proves otherwise.\n# Match the upstream client Makefile: preserve the compiler defaults for RTTI\n# and exceptions, and retain its signed-char behavior.\ntarget_compile_options(AssaultCubeEngine PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-fsigned-char>")
+# Match the upstream client Makefile's signed-char behavior while retaining\n# the compiler defaults for RTTI and exception handling.\ntarget_compile_options(AssaultCubeEngine PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-fsigned-char>")
 set_target_properties(AssaultCubeEngine PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
 find_library(AC_ZLIB z REQUIRED)
