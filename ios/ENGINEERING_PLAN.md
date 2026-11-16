@@ -46,9 +46,9 @@ The iOS control layer should support:
 - Bluetooth controller input through SDL's game-controller API;
 - safe-area-aware layout and configurable sensitivity.
 
-### 4. Replace desktop depth readback on iOS
+### 4. Validate the iOS depth-readback fallback
 
-The desktop `readdepth()` calls `glReadPixels(..., GL_DEPTH_COMPONENT, ...)`. GL4ES documents that GLES2 cannot provide the depth readback required by this code. The upstream mobile branch contains a ray-based replacement for Android. Port that algorithm behind an iOS platform conditional, preserving the existing desktop path, and test crosshair targeting, map geometry, mapmodels and editing separately.
+The desktop `readdepth()` calls `glReadPixels(..., GL_DEPTH_COMPONENT, ...)`. GL4ES documents that GLES2 cannot provide the depth readback required by this code. An iOS-only ray/line-of-sight fallback is now present in `source/src/rendergl.cpp`, based on the upstream Android implementation and with bounded traversal near map borders. It preserves the desktop path, but has not been compiled or tested. Verify crosshair targeting against walls and mapmodels, and editor cursor placement.
 
 ### 5. Keep the existing data importer, but make the engine consume its directory
 
@@ -71,7 +71,7 @@ Do not make the engine depend on the Windows executable or Windows DLLs. Only th
 
 - No iOS SDL2/GL4ES native build target is wired into this repository.
 - `EngineBridge.mm` is a placeholder, not an engine bridge.
-- The current branch lacks the upstream mobile touch UI.
-- The current renderer still expects desktop OpenGL behavior and uses depth-buffer readback.
+- The current branch still lacks the upstream mobile touch UI; the iOS control layer is not connected yet.
+- The renderer still expects desktop fixed-function OpenGL behavior; GL4ES integration and the iOS raycast fallback are source-only and unvalidated.
 - The existing SwiftUI app is a data-management shell, not the final SDL game host.
 - No ARM64 iOS engine build or physical-device gameplay test has succeeded yet.
