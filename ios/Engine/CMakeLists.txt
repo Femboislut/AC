@@ -141,14 +141,35 @@ set_target_properties(AssaultCubeEngine PROPERTIES POSITION_INDEPENDENT_CODE YES
 
 find_library(AC_ZLIB z REQUIRED)
 find_library(AC_OPENAL OpenAL REQUIRED)
+
+# SDL2 is imported as a raw static archive rather than as its original CMake
+# target, so explicitly propagate the iOS frameworks that SDL's CMake build
+# normally attaches to SDL2-static.
+find_library(AC_UIKIT UIKit REQUIRED)
+find_library(AC_FOUNDATION Foundation REQUIRED)
+find_library(AC_COREGRAPHICS CoreGraphics REQUIRED)
+find_library(AC_QUARTZCORE QuartzCore REQUIRED)
+find_library(AC_COREAUDIO CoreAudio REQUIRED)
+find_library(AC_AUDIOTOOLBOX AudioToolbox REQUIRED)
+find_library(AC_AVFOUNDATION AVFoundation REQUIRED)
+find_library(AC_COREMOTION CoreMotion REQUIRED)
+find_library(AC_COREVIDEO CoreVideo REQUIRED)
 find_library(AC_OPENGLES OpenGLES REQUIRED)
+find_library(AC_METAL Metal REQUIRED)
+find_library(AC_GAMECONTROLLER GameController)
 
 # SDL2's iOS bootstrap is linked transitively so SDL2main remains the single
 # UIApplication entry point. Do not define SDL_MAIN_HANDLED in this target.
 target_link_libraries(AssaultCubeEngine PUBLIC
     AC_SDL2main AC_SDL2 AC_GL4ES AC_VORBISFILE AC_VORBIS AC_OGG AC_ENET
-    ${AC_ZLIB} ${AC_OPENAL} ${AC_OPENGLES}
+    ${AC_ZLIB} ${AC_OPENAL}
+    ${AC_UIKIT} ${AC_FOUNDATION} ${AC_COREGRAPHICS} ${AC_QUARTZCORE}
+    ${AC_COREAUDIO} ${AC_AUDIOTOOLBOX} ${AC_AVFOUNDATION} ${AC_COREMOTION}
+    ${AC_COREVIDEO} ${AC_OPENGLES} ${AC_METAL}
 )
+if(AC_GAMECONTROLLER)
+    target_link_libraries(AssaultCubeEngine PUBLIC ${AC_GAMECONTROLLER})
+endif()
 
 message(STATUS "Configured AssaultCube native engine sources for iOS ARM64")
 message(STATUS "Dependency root: ${AC_IOS_DEPS_DIR}")
