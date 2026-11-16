@@ -113,9 +113,10 @@ jobs:
             -DPLATFORM=OS64 -DNOX11=ON -DNOEGL=ON -DSTATICLIB=ON \
             -DNO_LOADER=ON -DNO_INIT_CONSTRUCTOR=ON -DDEFAULT_ES=2
           cmake --build build/gl4es --config Release --target GL
-          test -f ios/third_party/gl4es/lib/libGL.a
+          GL4ES_ARCHIVE="$(find ios/third_party/gl4es/lib -type f -name 'libGL.a' -print -quit)"
+          test -n "$GL4ES_ARCHIVE"
           mkdir -p build/package/GL4ES/include
-          cp ios/third_party/gl4es/lib/libGL.a build/package/GL4ES/
+          cp "$GL4ES_ARCHIVE" build/package/GL4ES/
           cp -R ios/third_party/gl4es/include/GL build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4esinit.h build/package/GL4ES/include/
           cp ios/third_party/gl4es/include/gl4eshint.h build/package/GL4ES/include/

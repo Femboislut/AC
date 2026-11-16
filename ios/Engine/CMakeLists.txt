@@ -157,6 +157,7 @@ find_library(AC_COREVIDEO CoreVideo REQUIRED)
 find_library(AC_OPENGLES OpenGLES REQUIRED)
 find_library(AC_METAL Metal REQUIRED)
 find_library(AC_GAMECONTROLLER GameController)
+find_library(AC_COREHAPTICS CoreHaptics)
 
 # SDL2's iOS bootstrap is linked transitively so SDL2main remains the single
 # UIApplication entry point. Do not define SDL_MAIN_HANDLED in this target.
@@ -168,7 +169,12 @@ target_link_libraries(AssaultCubeEngine PUBLIC
     ${AC_COREVIDEO} ${AC_OPENGLES} ${AC_METAL}
 )
 if(AC_GAMECONTROLLER)
-    target_link_libraries(AssaultCubeEngine PUBLIC ${AC_GAMECONTROLLER})
+    # SDL itself weak-links GameController so older OS versions remain loadable.
+    target_link_options(AssaultCubeEngine PUBLIC "SHELL:-weak_framework GameController")
+endif()
+if(AC_COREHAPTICS)
+    # SDL enables MFi rumble only when CoreHaptics is available and weak-links it.
+    target_link_options(AssaultCubeEngine PUBLIC "SHELL:-weak_framework CoreHaptics")
 endif()
 
 message(STATUS "Configured AssaultCube native engine sources for iOS ARM64")

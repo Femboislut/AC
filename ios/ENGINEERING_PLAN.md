@@ -122,3 +122,8 @@ See [the native iOS engine build-target audit](../docs/ios-native-engine-build-a
 ## Application lifecycle
 
 The SDL UIKit lifecycle event path and current engine handling are documented in [the iOS lifecycle audit](../docs/ios-application-lifecycle-audit.md). Background/foreground events now suppress rendering and refresh drawable dimensions on resume; device validation and GL/audio recovery remain outstanding.
+
+
+## Static dependency and link audit
+
+See [the dependency and link audit](../docs/ios-static-dependency-link-audit.md) for verified upstream archive names, generated SDL header placement, optional weak-linked controller frameworks, and the GL4ES multi-configuration archive-path correction.
