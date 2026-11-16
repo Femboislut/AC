@@ -1,24 +1,28 @@
-// ios/AssaultCubeEngine/EngineBridge.mm
 #import "EngineBridge.h"
 
-extern "C" int ac_ios_main(int argc, char **argv) {
-    return 0;
+#import <OpenGLES/ES2/gl.h>
+#import <OpenGLES/ES2/glext.h>
+
+@implementation EngineBridge
+
++ (void)initialize {
+    // This is intentionally a stub. The actual AssaultCube engine remains desktop-oriented
+    // and is not yet ported to iOS. This bridge exists to hold the platform boundary.
+    glClearColor(0.1f, 0.12f, 0.18f, 1.0f);
 }
 
-extern "C" void ac_ios_resize(int width, int height) {
++ (void)shutdown {
 }
 
-extern "C" void ac_ios_tick(void) {
++ (void)renderFrame {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-extern "C" void ac_ios_set_touch(int touch_id, float x, float y, bool active) {
++ (void)setViewportWithWidth:(NSInteger)width height:(NSInteger)height {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    glViewport(0, 0, (GLsizei)width, (GLsizei)height);
 }
 
-extern "C" void ac_ios_set_look(float dx, float dy) {
-}
-
-extern "C" void ac_ios_set_fire(bool active) {
-}
-
-extern "C" void ac_ios_set_jump(bool active) {
-}
+@end

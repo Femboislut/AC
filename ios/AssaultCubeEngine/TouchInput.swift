@@ -1,19 +1,26 @@
-// ios/AssaultCubeEngine/TouchInput.swift
 import Foundation
 import UIKit
 
-final class TouchInputController {
-    private var activePoints: [Int: CGPoint] = [:]
-
-    func beginPoint(_ point: CGPoint, touchID: Int) {
-        activePoints[touchID] = point
+enum TouchInput {
+    static func handleBegan(_ touches: Set<UITouch>, view: UIView) {
+        for touch in touches {
+            let point = touch.location(in: view)
+            _ = point
+        }
     }
 
-    func movePoint(_ point: CGPoint, touchID: Int) {
-        activePoints[touchID] = point
+    static func handleMoved(_ touches: Set<UITouch>, view: UIView) {
+        for touch in touches {
+            let point = touch.location(in: view)
+            let previous = touch.previousLocation(in: view)
+            _ = (point, previous)
+        }
     }
 
-    func endPoint(_ point: CGPoint, touchID: Int) {
-        activePoints.removeValue(forKey: touchID)
+    static func handleEnded(_ touches: Set<UITouch>, view: UIView) {
+        for touch in touches {
+            let point = touch.location(in: view)
+            _ = point
+        }
     }
 }

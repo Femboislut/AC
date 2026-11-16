@@ -1,27 +1,51 @@
-// ios/AssaultCubeApp/EngineViewController.swift
-import UIKit
 import GLKit
+import UIKit
 
-final class EngineViewController: UIViewController {
-    private var glkView: GLKView?
+final class EngineViewController: GLKViewController {
+    private let context = EAGLContext(api: .openGLES2)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .black
 
-        let context = EAGLContext(api: .openGLES3) ?? EAGLContext(api: .openGLES2)
-        guard let context else { fatalError("No OpenGL ES context") }
+        guard let context else {
+            fatalError("OpenGLES2 context could not be created")
+        }
 
-        let newGLKView = GLKView(frame: view.bounds, context: context)
-        newGLKView.drawableColorFormat = .RGBA8888
-        newGLKView.drawableDepthFormat = .format24
-        newGLKView.isMultipleTouchEnabled = true
-        glkView = newGLKView
-        view.addSubview(newGLKView)
+        let glkView = view as? GLKView ?? GLKView(frame: view.bounds, context: context)
+        glkView.context = context
+        glkView.drawableColorFormat = .RGBA8888
+        glkView.drawableDepthFormat = .Format16
+        glkView.drawableStencilFormat = .Format8
+
+        self.view = glkView
+        self.preferredFramesPerSecond = 60
+
+        EngineBridge.initialize()
+        EngineBridge.setViewport(width: Int(view.bounds.width), height: Int(view.bounds.height))
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        glkView?.frame = view.bounds
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        self.becomeFirstResponder()
+    }
+
+    override func glkView(_ view: GLKView, drawIn rect: CGRect) {
+        EngineBridge.renderFrame()
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        TouchInput.handleBegan(touches, view: view)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        TouchInput.handleMoved(touches, view: view)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        TouchInput.handleEnded(touches, view: view)
+    }
+
+    deinit {
+        EngineBridge.shutdown()
     }
 }
