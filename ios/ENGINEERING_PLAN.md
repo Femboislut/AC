@@ -56,7 +56,7 @@ The remaining work is to add the iOS native build target, compile/link GL4ES as 
 
 ### 3. Port the mobile input layer, then add iOS-specific controls
 
-The current branch has no `source/src/touch/` tree and its main loop never calls `checktouchinput()`. The upstream `acmobile` branch contains a touch UI and SDL-event handling that should be evaluated as a source of reusable code. It will need a version-aware transplant into this branch; do not copy its entire `main.cpp` over the newer engine blindly.
+The current branch has no `source/src/touch/` tree and its main loop never calls `checktouchinput()`. The upstream `acmobile` branch contains a touch UI and SDL-event handling that should be evaluated as a source of reusable code. It will need a version-aware transplant into this branch; do not copy its entire `main.cpp` over the newer engine blindly. The detailed source audit is in [docs/ios-mobile-input-port-audit.md](../docs/ios-mobile-input-port-audit.md).
 
 The iOS control layer should support:
 - left virtual stick for movement;
@@ -71,7 +71,7 @@ The desktop `readdepth()` calls `glReadPixels(..., GL_DEPTH_COMPONENT, ...)`. GL
 
 ### 5. Keep the existing data importer, but make the engine consume its directory
 
-The Swift `AssaultCubeData` package can remain useful for importing and validating the user's game-data archive. The runtime must receive the resulting absolute directory and configure AssaultCube's VFS/profile paths before it attempts to load fonts, maps, packages, configuration, or writable files.
+The Swift `AssaultCubeData` package can remain useful for importing and validating the user's game-data archive. The current engine already accepts `--mod=<path>` for a package/data search directory and `--home=<path>` for its writable profile. The launcher should pass absolute sandbox paths for `Documents/GameData` and `Documents/Profile`, respectively. See [docs/ios-game-data-path-audit.md](../docs/ios-game-data-path-audit.md) for the path layout and outstanding VFS checks. The runtime must receive these paths before it attempts to load fonts, maps, packages, configuration, or writable files.
 
 Do not make the engine depend on the Windows executable or Windows DLLs. Only the game's data files are imported; the engine is compiled as native ARM64 iOS code.
 
