@@ -54,6 +54,9 @@ jobs:
           git -C SDL rev-parse HEAD
           git -C libogg rev-parse HEAD
           git -C libvorbis rev-parse HEAD
+      - name: Validate iOS engine source list against desktop client manifest
+        run: python3 scripts/validate-ios-engine-source-list.py
+
       - name: Build SDL2 for arm64 iOS
         run: |
           set -euo pipefail
