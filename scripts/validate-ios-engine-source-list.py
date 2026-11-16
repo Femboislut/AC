@@ -42,7 +42,7 @@ if not match:
     fail("Could not find AC_ENGINE_SOURCES in ios/Engine/CMakeLists.txt")
 
 actual = {
-    Path("source") / path
+    Path(path)
     for path in re.findall(r'\$\{AC_ROOT\}/(source/src/[^"]+\.cpp)', match.group(1))
 }
 
