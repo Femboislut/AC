@@ -148,7 +148,9 @@ jobs:
           cmake --build build/engine --config Release --target AssaultCubeEngine
           mkdir -p build/package/Engine/lib
           find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ \\;
+          find build/engine -type f -name 'libAC_ENET.a' -exec cp {} build/package/Engine/lib/ \\;
           test -f build/package/Engine/lib/libAssaultCubeEngine.a
+          test -f build/package/Engine/lib/libAC_ENET.a
       - name: Verify static library architectures and package
         run: |
           set -euo pipefail
@@ -161,6 +163,7 @@ jobs:
           test -f build/package/Audio/lib/libvorbis.a
           test -f build/package/Audio/lib/libvorbisfile.a
           test -f build/package/Engine/lib/libAssaultCubeEngine.a
+          test -f build/package/Engine/lib/libAC_ENET.a
           test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
       - name: Upload combined dependency artifact
