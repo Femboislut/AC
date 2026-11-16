@@ -27,6 +27,25 @@ The current SwiftUI/GLKit view is useful as a UI/data-import prototype, but it s
 
 The iOS runtime should use SDL's iOS platform backend and its application lifecycle. Keep one SDL window/context and one authoritative engine loop. Do not create an EAGL/GLK context independently and then attempt to render into it from a separate SDL context.
 
+
+
+### 1A. SDL's iOS application entry point conflicts with the current SwiftUI @main entry point
+
+There is a second, distinct lifecycle constraint beyond the SDL-owned window/context:
+
+- The pinned SDL2 revision includes `src/main/uikit/SDL_uikit_main.c`. Its iOS entry point calls `SDL_UIKitRunApp(argc, argv, SDL_main)` unless `SDL_MAIN_HANDLED` is defined.
+- SDL's `SDL_main.h` maps the engine's `main` function to `SDL_main` for SDL-managed platforms. This is how the existing engine's `main.cpp` becomes the callback invoked by SDL's UIKit bootstrap.
+- The current iOS app target instead declares `@main struct AssaultCubeDataApp: App`, which gives SwiftUI ownership of the process entry point and application lifecycle.
+
+These are alternative application bootstraps, not two pieces that can simply be linked together. Adding SDL2main to the SwiftUI target without changing the app entry point risks duplicate or unresolved entry-point symbols; omitting SDL2main while compiling the engine's entry point as `SDL_main` leaves no caller to start the engine. Calling `SDL_UIKitRunApp` after SwiftUI has already started UIKit would also attempt a second application bootstrap and is not a valid integration strategy.
+
+**Decision required before engine wiring:** choose one of these two designs and implement it consistently:
+
+1. **SDL-owned app bootstrap (recommended for the least invasive engine port):** use SDL2's UIKit entry point as the sole process entry point, build the engine's `main` as `SDL_main`, and move or reimplement the data-import/settings screens as UIKit screens hosted within the SDL application's single window (or as an SDL-native menu). Do not keep the SwiftUI `@main` app entry point in that target.
+2. **SwiftUI-owned app bootstrap (larger SDL backend change):** keep SwiftUI's `@main` and adapt SDL's UIKit backend so SDL can attach to a view/window owned by the existing UIApplication without invoking `SDL_UIKitRunApp` or creating a competing UIWindow. This requires a maintained SDL backend patch and a tested external-view/context handoff; it must not be assumed to work merely because SDL has `SDL_CreateWindowFrom` on other platforms.
+
+Until one design is selected, the current SwiftUI shell, GLKit prototype, SDL2main library and engine entry point must remain unconnected. The first integration proof should be a minimal iOS target that launches through the selected bootstrap, creates exactly one SDL window/context, renders a clear-color frame, backgrounds and resumes, and shuts down cleanly on a physical device.
+
 ### 2. GL4ES is the first renderer-compatibility experiment
 
 The repository now pins GL4ES as a submodule at `ios/third_party/gl4es`. Under `AC_PLATFORM_IOS`, `platform.h` includes GL4ES's desktop-compatible headers rather than SDL's GLES2-only headers. `main.cpp` now requests an ES 2.0 context, supplies GL4ES with SDL's procedure-address and drawable-size callbacks, initializes GL4ES after SDL creates the context, and closes GL4ES before the context is destroyed/recreated.

@@ -84,3 +84,10 @@ The import package stores data at Documents/GameData. The engine's VFS, config, 
 ## Acceptance criteria for calling it playable
 
 A successful IPA archive is not enough. The port is playable only after a physical iPhone can launch the app, load an imported map, render the actual 3D world, move and aim, fire a weapon, hear audio, and enter a real multiplayer session.
+
+
+### SDL application bootstrap and SwiftUI entry-point conflict
+
+The pinned SDL2 iOS source includes `src/main/uikit/SDL_uikit_main.c`, which calls `SDL_UIKitRunApp(argc, argv, SDL_main)` for the SDL-managed application entry point. SDL's `SDL_main.h` maps the engine's `main` to `SDL_main`. The current Xcode target separately declares a SwiftUI `@main` app. Those are competing process bootstraps: linking SDL2main into the SwiftUI app without redesigning the entry point is not a valid way to start the engine, and calling SDL_UIKitRunApp after SwiftUI has already started UIKit is also invalid.
+
+Before wiring the engine, select one architecture: (A) let SDL2 own the process entry point and port the importer/settings UI into UIKit screens hosted by the SDL app, or (B) keep SwiftUI as the process owner and patch SDL's UIKit backend to attach to the existing application/window/view without invoking SDL_UIKitRunApp or creating a second UIWindow/context. Option B is a larger backend integration and requires a real device proof. The current shell and engine remain intentionally disconnected until this is resolved.
