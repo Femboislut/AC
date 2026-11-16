@@ -52,6 +52,7 @@
     // fixed-function calls to GL4ES symbols backed by the current GLES context.
     #include <GL/gl.h>
     #include <GL/glext.h>
+    #include <gl4esinit.h>
     #include <OpenAL/al.h>
     #include <OpenAL/alc.h>
     #include "Vorbis/vorbisfile.h"
