@@ -1,21 +1,19 @@
-# AssaultCube iOS feasibility scaffold
+# AssaultCube iOS port
 
-This directory contains an iOS host scaffold and a touch bridge for evaluating a port of the desktop-oriented AssaultCube engine.
+This directory contains the native iOS data-import prototype and early engine-host experiments. The app is not yet a playable AssaultCube port.
 
 ## Current status
 
-- UIKit/GLKit host and OpenGL ES placeholder renderer exist.
-- Native bridge accepts normalized touch samples and exposes per-frame touch snapshots.
-- The bridge is still not connected to the assaultcube game loop; touches are only captured as data.
-- The existing engine is still SDL desktop-oriented and not yet adapted to an iOS runtime lifecycle.
-- There is no full iOS build target, no packaged runtime assets, and no device validation.
+- The SwiftUI data importer validates and stores imported AssaultCube game data.
+- The GLKit/Objective-C++ bridge is only a placeholder; it does not start the C++ engine.
+- The existing engine still owns its SDL startup, event loop, rendering and buffer presentation in `source/src/main.cpp`.
+- The renderer still uses desktop fixed-function OpenGL and reads the depth buffer for crosshair targeting.
+- No ARM64 iOS engine build or physical-device gameplay test has succeeded.
 
-## Next engineering steps
+## Recommended implementation direction
 
-1. Add an iOS build target and resolve SDK/platform dependencies.
-2. Replace or adapt the desktop fixed-function renderer for an iOS-supported rendering API.
-3. Connect the touch snapshot API to engine input/game actions.
-4. Adapt engine startup, pause/resume, audio, writable profile paths, and asset loading.
-5. Bundle data files and validate on a physical device.
+Use SDL2's iOS backend as the single application/window/context owner, and evaluate GL4ES as the compatibility layer for the engine's desktop OpenGL calls. The upstream `acmobile` branch provides reusable mobile touch-UI code and an Android ray-based replacement for depth-buffer readback. Those changes need to be adapted to this newer source tree rather than copied wholesale.
 
-The scaffold is not yet a playable iOS port.
+See [ENGINEERING_PLAN.md](ENGINEERING_PLAN.md) for the technical rationale, known limitations, implementation sequence and acceptance criteria.
+
+The Windows executable and DLLs are not part of the iOS runtime. The intended app imports game data only; the AssaultCube engine itself must be compiled as native ARM64 iOS code.
