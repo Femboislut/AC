@@ -2,50 +2,66 @@ import GLKit
 import UIKit
 
 final class EngineViewController: GLKViewController {
-    private let context = EAGLContext(api: .openGLES2)
+    private var context: EAGLContext?
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        guard let context else {
+        guard let context = EAGLContext(api: .openGLES2) else {
             fatalError("OpenGLES2 context could not be created")
         }
+        self.context = context
 
-        let glkView = view as? GLKView ?? GLKView(frame: view.bounds, context: context)
-        glkView.context = context
+        let glkView = GLKView(frame: view.bounds, context: context)
+        glkView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         glkView.drawableColorFormat = .RGBA8888
         glkView.drawableDepthFormat = .Format16
         glkView.drawableStencilFormat = .Format8
+        view = glkView
 
-        self.view = glkView
-        self.preferredFramesPerSecond = 60
-
-        EngineBridge.initialize()
-        EngineBridge.setViewport(width: Int(view.bounds.width), height: Int(view.bounds.height))
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        self.becomeFirstResponder()
+        preferredFramesPerSecond = 60
+        EngineBridge.startEngine()
+        installApplicationLifecycleObservers()
     }
 
     override func glkView(_ view: GLKView, drawIn rect: CGRect) {
-        EngineBridge.renderFrame()
+        EngineBridge.renderFrame(withWidth: view.drawableWidth, height: view.drawableHeight)
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        TouchInput.handleBegan(touches, view: view)
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        isPaused = false
     }
 
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        TouchInput.handleMoved(touches, view: view)
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        isPaused = true
     }
 
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        TouchInput.handleEnded(touches, view: view)
+    private func installApplicationLifecycleObservers() {
+        let center = NotificationCenter.default
+        lifecycleObservers.append(center.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isPaused = true
+        })
+        lifecycleObservers.append(center.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isPaused = false
+        })
     }
 
     deinit {
+        lifecycleObservers.forEach(NotificationCenter.default.removeObserver)
         EngineBridge.shutdown()
+        if let context, EAGLContext.current() === context {
+            EAGLContext.setCurrent(nil)
+        }
     }
 }

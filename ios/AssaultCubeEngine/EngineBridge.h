@@ -4,10 +4,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface EngineBridge : NSObject
 
-+ (void)initialize;
++ (void)startEngine;
 + (void)shutdown;
-+ (void)renderFrame;
-+ (void)setViewportWithWidth:(NSInteger)width height:(NSInteger)height;
++ (void)renderFrameWithWidth:(NSInteger)width height:(NSInteger)height;
 
 @end
 
