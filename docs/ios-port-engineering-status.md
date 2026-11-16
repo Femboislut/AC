@@ -16,10 +16,9 @@ This branch is a continuation of the iOS feasibility scaffold. It deliberately s
 
 - `ios/project.yml`: XcodeGen project definition for the SwiftUI app shell and local data package.
 - `.github/workflows/ios-build.yml`: macOS CI that runs package tests, generates the Xcode project, archives the app without signing, and uploads an unsigned IPA artifact.
-- `.github/workflows/ios-gl4es-build.yml`: a reproducible ARM64 iOS static-library build for the pinned GL4ES submodule.
-- `.github/workflows/ios-sdl2-build.yml`: a reproducible ARM64 iOS static-library build for SDL2, pinned to upstream commit `fe30456e94e89ef2cab50172121bffb7f7f50830`.
+- `.github/workflows/ios-dependencies-build.yml`: one consolidated macOS job that builds SDL2 and GL4ES sequentially for ARM64 iOS and packages both libraries together. SDL2 is pinned to upstream commit `fe30456e94e89ef2cab50172121bffb7f7f50830`.
 
-The GL4ES and SDL2 workflows are dependency-build milestones, not an engine build. Their first runs are pending; no artifact has been verified yet.
+This dependency workflow is not an engine build. Its first run is pending; no artifact has been verified yet. The former separate GL4ES, SDL2 and app-shell-validation workflows were removed to avoid duplicate queued jobs.
 
 **The IPA from this workflow is only the data-management shell. It is not a playable AssaultCube build.** The engine sources are not yet compiled or linked into this Xcode target.
 
