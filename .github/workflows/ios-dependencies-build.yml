@@ -135,6 +135,10 @@ jobs:
         run: |
           set -euo pipefail
           find build/package -name '*.a' -print -exec xcrun lipo -info {} \;
+          while IFS= read -r -d '' archive; do
+            echo "Verifying arm64 slice: $archive"
+            xcrun lipo -verify_arch arm64 "$archive"
+          done < <(find build/package -name '*.a' -print0)
           test -f build/package/Audio/lib/libogg.a
           test -f build/package/Audio/lib/libvorbis.a
           test -f build/package/Audio/lib/libvorbisfile.a
