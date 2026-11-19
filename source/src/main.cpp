@@ -11,7 +11,7 @@ static void close_ios_gl4es();
 
 // Persist early startup breadcrumbs to Documents so a crash before clientlog
 // initialization can still be diagnosed on-device through Files sharing.
-static void iosstartup_log(const char *message)
+void iosstartup_log(const char *message)
 {
     const char *home = getenv("HOME");
     if(home && *home)
