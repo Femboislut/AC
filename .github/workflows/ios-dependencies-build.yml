@@ -8,6 +8,9 @@ on:
     paths:
       - 'ios/Engine/**'
       - 'ios/AssaultCubeSDLTest/**'
+      - 'ios/AssaultCubeData/**'
+      - 'ios/AssaultCubeApp/**'
+      - 'ios/NSISExtractor/**'
       - 'ios/project.yml'
       - 'ios/third_party/gl4es/**'
       - 'source/src/**'
