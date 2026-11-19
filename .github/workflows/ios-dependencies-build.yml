@@ -254,6 +254,10 @@ jobs:
           set -euo pipefail
           rustup target add aarch64-apple-ios
           cargo test --manifest-path ios/NSISExtractor/Cargo.toml
+          curl --fail --location --retry 3 --output /tmp/AssaultCube_v1.3.0.2.exe "https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition.exe"
+          cargo run --manifest-path ios/NSISExtractor/Cargo.toml --example extract_installer -- /tmp/AssaultCube_v1.3.0.2.exe /tmp/ac-nsis-extracted
+          find /tmp/ac-nsis-extracted -path '*/config/font.cfg' -print -quit | grep -q .
+          find /tmp/ac-nsis-extracted -path '*/packages/maps/official/*.cgz' -print -quit | grep -q .
           cargo build --manifest-path ios/NSISExtractor/Cargo.toml --release --target aarch64-apple-ios
           mkdir -p build/nsis-target/aarch64-apple-ios/release
           cp ios/NSISExtractor/target/aarch64-apple-ios/release/libac_nsis_extractor.a build/nsis-target/aarch64-apple-ios/release/
