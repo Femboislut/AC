@@ -75,16 +75,23 @@ jobs:
           grep -Fq '#if defined(AC_PLATFORM_IOS)' source/src/main.cpp
       - name: Build SDL2 for arm64 iOS
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           cmake -S SDL -B build/sdl2 -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
             -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
             -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_TESTS=OFF
-          cmake --build build/sdl2 --config Release --target SDL2-static SDL2main
+          # Build the Xcode targets separately so a target-specific failure is
+          # visible in the Actions log instead of being hidden in one invocation.
+          cmake --build build/sdl2 --config Release --target SDL2-static
+          cmake --build build/sdl2 --config Release --target SDL2main
           mkdir -p build/package/SDL2/lib build/package/SDL2/include
-          find build/sdl2 -type f -name 'libSDL2*.a' -exec cp {} build/package/SDL2/lib/ +
-          test -f build/package/SDL2/lib/libSDL2.a
-          test -f build/package/SDL2/lib/libSDL2main.a
+          # Xcode may expose configuration outputs through symlinks; follow them
+          # rather than silently skipping archives with find -type f.
+          find build/sdl2 -name 'libSDL2*.a' -exec cp -L {} build/package/SDL2/lib/ \;
+          echo "SDL2 archive outputs:"
+          ls -lah build/package/SDL2/lib
+          test -s build/package/SDL2/lib/libSDL2.a
+          test -s build/package/SDL2/lib/libSDL2main.a
           cp -R SDL/include/. build/package/SDL2/include/
           if [ -d build/sdl2/include ]; then cp -R build/sdl2/include/. build/package/SDL2/include/; fi
           if [ -d build/sdl2/include-config-release/SDL2 ]; then
