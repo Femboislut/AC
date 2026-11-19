@@ -15,6 +15,9 @@ targets:
     platform: iOS
     sources:
       - path: AssaultCubeApp/AssaultCubeDataApp.swift
+    resources:
+      - path: NSISExtractor/LICENSE
+      - path: NSISExtractor/NOTICE
     dependencies:
       - package: AssaultCubeData
     info:
