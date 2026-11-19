@@ -114,7 +114,7 @@ jobs:
             mkdir -p build/package/SDL2/include/SDL2
             cp -R build/sdl2/include-config-release/SDL2/. build/package/SDL2/include/SDL2/
           fi
-      - name: Build SDL2_image for arm64 iOS (ImageIO backend)
+      - name: Build SDL2_image for arm64 iOS (STB backend)
         run: |
           set -euxo pipefail
           cmake -S SDL_image -B build/sdl2_image -G Xcode \
@@ -213,10 +213,14 @@ jobs:
           cmake --build build/engine --config Release --target AssaultCubeEngine \
             2>&1 | tee build/logs/engine-build.log
           mkdir -p build/package/Engine/lib
-          find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ +
-          find build/engine -type f -name 'libAC_ENET.a' -exec cp {} build/package/Engine/lib/ +
-          test -f build/package/Engine/lib/libAssaultCubeEngine.a
-          test -f build/package/Engine/lib/libAC_ENET.a
+          echo "Engine archive outputs (including symlinks):"
+          find build/engine -name 'libAssaultCubeEngine.a' -o -name 'libAC_ENET.a'
+          find build/engine -name 'libAssaultCubeEngine.a' -exec cp -L {} build/package/Engine/lib/ \;
+          find build/engine -name 'libAC_ENET.a' -exec cp -L {} build/package/Engine/lib/ \;
+          echo "Packaged engine archives:"
+          ls -lah build/package/Engine/lib
+          test -s build/package/Engine/lib/libAssaultCubeEngine.a
+          test -s build/package/Engine/lib/libAC_ENET.a
       - name: Verify static library architectures and package
         run: |
           set -euo pipefail
