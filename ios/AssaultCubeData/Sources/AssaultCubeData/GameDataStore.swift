@@ -33,7 +33,7 @@ public enum GameDataError: LocalizedError {
         case .unsupportedInput:
             return "Choose an AssaultCube data folder, ZIP archive, or Windows installer (.exe)."
         case .invalidInstaller(let detail):
-            return "The Windows installer could not be safely extracted: \\(detail)"
+            return "The Windows installer could not be safely extracted: \(detail)"
         case .invalidArchive(let detail):
             return "The ZIP archive could not be imported: \(detail)"
         case .unsafeArchiveEntry(let path):
