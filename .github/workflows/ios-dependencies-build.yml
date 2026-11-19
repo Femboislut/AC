@@ -37,6 +37,12 @@ jobs:
           repository: libsdl-org/SDL
           ref: fe30456e94e89ef2cab50172121bffb7f7f50830
           path: SDL
+      - name: Check out pinned SDL2_image source
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL_image
+          ref: release-2.8.8
+          path: SDL_image
       - name: Check out pinned libogg source
         uses: actions/checkout@v4
         with:
@@ -70,10 +76,11 @@ jobs:
         with:
           path: |
             build/sdl2
+            build/sdl2_image
             build/ogg
             build/vorbis
             build/gl4es
-          key: ios-native-deps-v1-${{ runner.os }}-xcode26-sdl-fe30456e94e89ef2cab50172121bffb7f7f50830-ogg-e1774cd77f471443541596e09078e78fdc342e4f-vorbis-0657aee69dec8508a0011f47f3b69d7538e9d262-gl4es-8b1a3da5d2331d0f88b70be25963182d46eed857
+          key: ios-native-deps-v2-${{ runner.os }}-xcode26-sdl-fe30456e94e89ef2cab50172121bffb7f7f50830-ogg-e1774cd77f471443541596e09078e78fdc342e4f-vorbis-0657aee69dec8508a0011f47f3b69d7538e9d262-gl4es-8b1a3da5d2331d0f88b70be25963182d46eed857
       - name: Validate iOS engine source list against desktop client manifest
         run: python3 scripts/validate-ios-engine-source-list.py
 
@@ -107,6 +114,23 @@ jobs:
             mkdir -p build/package/SDL2/include/SDL2
             cp -R build/sdl2/include-config-release/SDL2/. build/package/SDL2/include/SDL2/
           fi
+      - name: Build SDL2_image for arm64 iOS (ImageIO backend)
+        run: |
+          set -euxo pipefail
+          cmake -S SDL_image -B build/sdl2_image -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DSDL2IMAGE_INSTALL=OFF \
+            -DSDL2IMAGE_SAMPLES=OFF -DSDL2IMAGE_TESTS=OFF \
+            -DSDL2IMAGE_BACKEND_IMAGEIO=ON -DSDL2IMAGE_BACKEND_STB=OFF \
+            -DSDL2IMAGE_AVIF=OFF -DSDL2IMAGE_JXL=OFF -DSDL2IMAGE_WEBP=OFF \
+            -DSDL2IMAGE_TIF=OFF
+          cmake --build build/sdl2_image --config Release --target SDL2_image
+          mkdir -p build/package/SDL2_image/lib build/package/SDL2_image/include
+          find build/sdl2_image -name 'libSDL2_image*.a' -exec cp -L {} build/package/SDL2_image/lib/ \
+          cp -R SDL_image/include/. build/package/SDL2_image/include/
+          test -s build/package/SDL2_image/lib/libSDL2_image.a
+          test -s build/package/SDL2_image/include/SDL_image.h
       - name: Build libogg for arm64 iOS
         run: |
           set -euo pipefail
@@ -199,6 +223,7 @@ jobs:
             echo "Verifying arm64 slice: $archive"
             xcrun lipo -verify_arch arm64 "$archive"
           done < <(find build/package -name '*.a' -print0)
+          test -f build/package/SDL2_image/lib/libSDL2_image.a
           test -f build/package/Audio/lib/libogg.a
           test -f build/package/Audio/lib/libvorbis.a
           test -f build/package/Audio/lib/libvorbisfile.a
