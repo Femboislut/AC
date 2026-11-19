@@ -18,13 +18,13 @@ permissions:
 
 concurrency:
   group: ios-arm64-dependencies-${{ github.ref }}
-  # Serialize expensive native builds; do not cancel a healthy run when a follow-up commit lands.
-  cancel-in-progress: false
+  # Keep only the newest commit's build; cancel stale queued/running attempts.
+  cancel-in-progress: true
 
 jobs:
   build-dependencies:
     name: Build SDL2, GL4ES and Ogg/Vorbis sequentially
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 90
     steps:
       - name: Check out AssaultCube and GL4ES submodule
