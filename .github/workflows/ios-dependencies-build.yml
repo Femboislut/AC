@@ -249,7 +249,8 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
-        run: xcodegen generate --spec ios/project.yml
+        working-directory: ios
+        run: xcodegen generate --spec project.yml
       - name: Build SDL2 and GL4ES iOS smoke-test app
         run: |
           set -euo pipefail
