@@ -1259,6 +1259,35 @@ void sanitychecks()
 
 int main(int argc, char **argv)
 {
+#if defined(AC_PLATFORM_IOS)
+    // The importer and game target deliberately share the same bundle identifier,
+    // so an app update retains Documents/GameData imported by the previous IPA.
+    // Supply the sandbox paths before AssaultCube parses its normal CLI options.
+    const char *ios_home = getenv("HOME");
+    if(ios_home && *ios_home)
+    {
+        bool has_home_arg = false, has_mod_arg = false;
+        for(int i = 1; i < argc; ++i)
+        {
+            if(!strcmp(argv[i], "--home") || !strncmp(argv[i], "--home=", 7)) has_home_arg = true;
+            if(!strncmp(argv[i], "--mod=", 6)) has_mod_arg = true;
+        }
+        static char ios_home_arg[4096], ios_mod_arg[4096];
+        char **expanded_argv = (char **)calloc((size_t)argc + 3, sizeof(char *));
+        if(expanded_argv)
+        {
+            int expanded_argc = 0;
+            for(int i = 0; i < argc; ++i) expanded_argv[expanded_argc++] = argv[i];
+            if(!has_home_arg && snprintf(ios_home_arg, sizeof(ios_home_arg), "--home=%s/Documents/Profile", ios_home) > 0)
+                expanded_argv[expanded_argc++] = ios_home_arg;
+            if(!has_mod_arg && snprintf(ios_mod_arg, sizeof(ios_mod_arg), "--mod=%s/Documents/GameData", ios_home) > 0)
+                expanded_argv[expanded_argc++] = ios_mod_arg;
+            expanded_argv[expanded_argc] = NULL;
+            argv = expanded_argv;
+            argc = expanded_argc;
+        }
+    }
+#endif
     DEBUGCODE(sanitychecks());
     extern struct servercommandline scl;
     #ifdef WIN32
