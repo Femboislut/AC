@@ -1296,7 +1296,7 @@ int main(int argc, char **argv)
     iosstartup_log("START: engine main() entered");
     // Import/validate assets before any engine configuration or texture loading.
     // This runs inside SDL's existing UIKit lifecycle and does not create a second app entry point.
-    iosstartup_log("startup: game-data preflight begin");
+    iosstartup_log("startup: checking Documents/GameData before SDL engine startup");
     if(ac_ios_ensure_game_data() != 0)
     {
         iosstartup_log("startup: game-data preflight cancelled or failed");
