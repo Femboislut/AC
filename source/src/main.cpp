@@ -6,6 +6,7 @@
 #endif
 
 #if defined(AC_PLATFORM_IOS)
+extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 
 // Persist early startup breadcrumbs to Documents so a crash before clientlog
@@ -21,13 +22,13 @@ static void iosstartup_log(const char *message)
             FILE *log = fopen(path, "a");
             if(log)
             {
-                fprintf(log, "%s\\n", message ? message : "(null)");
+                fprintf(log, "%s\n", message ? message : "(null)");
                 fflush(log);
                 fclose(log);
             }
         }
     }
-    fprintf(stderr, "[AC-iOS] %s\\n", message ? message : "(null)");
+    fprintf(stderr, "[AC-iOS] %s\n", message ? message : "(null)");
     fflush(stderr);
 }
 #else
@@ -1293,6 +1294,15 @@ int main(int argc, char **argv)
 {
 #if defined(AC_PLATFORM_IOS)
     iosstartup_log("START: engine main() entered");
+    // Import/validate assets before any engine configuration or texture loading.
+    // This runs inside SDL's existing UIKit lifecycle and does not create a second app entry point.
+    iosstartup_log("startup: game-data preflight begin");
+    if(ac_ios_ensure_game_data() != 0)
+    {
+        iosstartup_log("startup: game-data preflight cancelled or failed");
+        return EXIT_FAILURE;
+    }
+    iosstartup_log("startup: game-data preflight complete");
     // The importer and game target deliberately share the same bundle identifier,
     // so an app update retains Documents/GameData imported by the previous IPA.
     // Supply the sandbox paths before AssaultCube parses its normal CLI options.
