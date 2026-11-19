@@ -10,6 +10,7 @@ on:
       - 'ios/AssaultCubeSDLTest/**'
       - 'ios/AssaultCubeData/**'
       - 'ios/AssaultCubeApp/**'
+      - 'ios/AssaultCubeGame/**'
       - 'ios/NSISExtractor/**'
       - 'ios/project.yml'
       - 'ios/scripts/generate-app-icon.swift'
