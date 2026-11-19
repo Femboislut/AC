@@ -11,6 +11,21 @@ This directory contains the native iOS data-import prototype and the first nativ
 - A separate `AssaultCubeSDLTest` target now exercises SDL's UIKit bootstrap, GLES2 context creation, GL4ES initialization, frame presentation and app lifecycle events. Its first CI build is pending; no physical-device result is claimed.
 - The SDL/GL4ES smoke-test IPA, if CI builds it, is a renderer/bootstrap test only. It does not contain or launch AssaultCube gameplay.
 
+## Import the Windows game installer on an iPhone
+
+The iOS importer accepts the official Windows AssaultCube installer as a **data source**. It does not run the Windows program, and the imported files alone do not make this prototype playable; the native iOS game engine still has to be integrated.
+
+1. Download the official Windows `.exe` installer from the [AssaultCube downloads page](https://assault.cubers.net/download.html) and keep it in the iPhone's Files app.
+2. In Files, locate the downloaded AssaultCube `.exe`, touch and hold it (or open its Share menu), then tap **Share**.
+3. Choose **AssaultCube iOS** in the share sheet. If you are running the importer through **LiveContainer**, choose **LiveContainer** in the share sheet instead, then select/open the AssaultCube importer from LiveContainer.
+4. In the importer, select the shared installer if prompted and wait for extraction and validation to finish. The app should report **Valid game data found** and show the imported file count and storage size.
+
+If the app does not appear in the share sheet, first open/install it in the iOS environment you are using, then try the Share action again. The Windows `.exe` is only used to extract game assets; Windows executables and DLLs are not executed on iOS.
+
+## Latest importer test
+
+The **iOS ARM64 dependency build** workflow successfully produced the data-importer IPA in [Run #42](https://github.com/TangiDev69/AC/actions/runs/44590796824). It was installed and tested on an iPhone: the importer reported valid game data (1,829 files, 49 MB). This confirms the installer-import and validation path, **not** game launch or gameplay. The separate SDL/GL4ES smoke-test IPA is also not the game.
+
 ## Architecture
 
 SDL2 must own the iOS application bootstrap, game window, OpenGL ES context and event loop. The `AssaultCubeSDLTest` XcodeGen target is kept separate from the SwiftUI data importer and provides the first executable integration proof. It links the exact ARM64 SDL2 and GL4ES archives produced earlier in the same workflow. The current SwiftUI `@main` shell and GLKit context are not connected to the engine because they conflict with SDL's UIKit bootstrap/window ownership. The preferred first integration is a minimal SDL-owned app; the data-import/settings UI can be moved into UIKit after that lifecycle proof.
