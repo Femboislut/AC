@@ -227,7 +227,7 @@ jobs:
           while IFS= read -r -d '' archive; do
             xcrun lipo -info "$archive"
             echo "Verifying arm64 slice: $archive"
-            xcrun lipo -verify_arch arm64 "$archive"
+            xcrun lipo "$archive" -verify_arch arm64
           done < <(find build/package -name '*.a' -print0)
           test -f build/package/SDL2_image/lib/libSDL2_image.a
           test -f build/package/Audio/lib/libogg.a
