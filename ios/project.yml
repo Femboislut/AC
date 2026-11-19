@@ -29,6 +29,15 @@ targets:
         SUPPORTS_MACCATALYST: "NO"
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGNING_ALLOWED: "NO"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/NSISExtractor/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/nsis-target/aarch64-apple-ios/release"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-lac_nsis_extractor"
+          - "-lc++"
+          - "-lz"
 
   AssaultCubeSDLTest:
     type: application

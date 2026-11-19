@@ -35,7 +35,7 @@ private struct GameDataView: View {
                         LabeledContent("Files", value: "\(status.fileCount)")
                         LabeledContent("Storage", value: ByteCountFormatter.string(fromByteCount: status.byteCount, countStyle: .file))
                     } else {
-                        Text("Required data is read from the AssaultCube game directory. The app does not execute Windows programs or DLLs.")
+                        Text("Required data is read from the AssaultCube game directory. The app extracts data from Windows installers without executing Windows programs or DLLs.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                         if !status.missingRequirements.isEmpty {
@@ -71,7 +71,7 @@ private struct GameDataView: View {
                 }
             }
             .navigationTitle("AssaultCube iOS")
-            .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.zip, .folder], allowsMultipleSelection: false, onCompletion: handleImport)
+            .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.zip, .folder, UTType(filenameExtension: "exe") ?? .data], allowsMultipleSelection: false, onCompletion: handleImport)
             .confirmationDialog("Remove imported game data?", isPresented: $showResetConfirmation, titleVisibility: .visible) {
                 Button("Reset Game Data", role: .destructive, action: resetData)
                 Button("Cancel", role: .cancel) { }

@@ -1,6 +1,9 @@
 import Foundation
 import ZIPFoundation
 
+@_silgen_name("ac_nsis_extract")
+private func ac_nsis_extract(_ inputPath: UnsafePointer<CChar>, _ outputPath: UnsafePointer<CChar>, _ errorBuffer: UnsafeMutablePointer<CChar>, _ errorCapacity: Int) -> Int32
+
 /// Validated installation data is stored separately from app preferences/configuration.
 public struct GameDataStatus: Equatable, Sendable {
     public let isValid: Bool
@@ -18,6 +21,7 @@ public struct GameDataStatus: Equatable, Sendable {
 
 public enum GameDataError: LocalizedError {
     case unsupportedInput
+    case invalidInstaller(String)
     case invalidArchive(String)
     case unsafeArchiveEntry(String)
     case archiveTooLarge
@@ -27,7 +31,9 @@ public enum GameDataError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .unsupportedInput:
-            return "Choose an AssaultCube data folder or a ZIP archive."
+            return "Choose an AssaultCube data folder, ZIP archive, or Windows installer (.exe)."
+        case .invalidInstaller(let detail):
+            return "The Windows installer could not be safely extracted: \\(detail)"
         case .invalidArchive(let detail):
             return "The ZIP archive could not be imported: \(detail)"
         case .unsafeArchiveEntry(let path):
@@ -74,6 +80,19 @@ public struct GameDataStore: Sendable {
 
         if sourceURL.pathExtension.lowercased() == "zip" {
             try extractArchive(at: sourceURL, into: staging)
+        } else if sourceURL.pathExtension.lowercased() == "exe" {
+            var errorBuffer = [CChar](repeating: 0, count: 2048)
+            let result = sourceURL.path.withCString { inputPath in
+                staging.path.withCString { outputPath in
+                    errorBuffer.withUnsafeMutableBufferPointer { buffer in
+                        ac_nsis_extract(inputPath, outputPath, buffer.baseAddress!, buffer.count)
+                    }
+                }
+            }
+            guard result == 0 else {
+                let detail = String(cString: errorBuffer)
+                throw GameDataError.invalidInstaller(detail.isEmpty ? "Unknown NSIS extraction error." : detail)
+            }
         } else {
             var isDirectory: ObjCBool = false
             guard fileManager.fileExists(atPath: sourceURL.path, isDirectory: &isDirectory), isDirectory.boolValue else {
