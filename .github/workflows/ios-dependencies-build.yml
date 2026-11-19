@@ -65,6 +65,15 @@ jobs:
           git -C SDL rev-parse HEAD
           git -C libogg rev-parse HEAD
           git -C libvorbis rev-parse HEAD
+      - name: Cache native dependency build directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/sdl2
+            build/ogg
+            build/vorbis
+            build/gl4es
+          key: ios-native-deps-v1-${{ runner.os }}-xcode26-sdl-fe30456e94e89ef2cab50172121bffb7f7f50830-ogg-e1774cd77f471443541596e09078e78fdc342e4f-vorbis-0657aee69dec8508a0011f47f3b69d7538e9d262-gl4es-8b1a3da5d2331d0f88b70be25963182d46eed857
       - name: Validate iOS engine source list against desktop client manifest
         run: python3 scripts/validate-ios-engine-source-list.py
 
