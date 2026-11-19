@@ -11,11 +11,13 @@ set(AC_IOS_DEPS_DIR "${CMAKE_CURRENT_LIST_DIR}/../Dependencies" CACHE PATH "Dire
 set(AC_SDL_INCLUDE "${AC_IOS_DEPS_DIR}/SDL2/include")
 set(AC_SDL_CONFIG_INCLUDE "${AC_SDL_INCLUDE}/SDL2")
 set(AC_GL4ES_INCLUDE "${AC_IOS_DEPS_DIR}/GL4ES/include")
+set(AC_SDL_IMAGE_INCLUDE "${AC_IOS_DEPS_DIR}/SDL2_image/include")
 set(AC_AUDIO_INCLUDE "${AC_IOS_DEPS_DIR}/Audio/include")
 
 set(AC_REQUIRED_FILES
     "${AC_IOS_DEPS_DIR}/SDL2/lib/libSDL2.a"
     "${AC_IOS_DEPS_DIR}/SDL2/lib/libSDL2main.a"
+    "${AC_IOS_DEPS_DIR}/SDL2_image/lib/libSDL2_image.a"
     "${AC_IOS_DEPS_DIR}/GL4ES/libGL.a"
     "${AC_IOS_DEPS_DIR}/Audio/lib/libogg.a"
     "${AC_IOS_DEPS_DIR}/Audio/lib/libvorbis.a"
@@ -27,7 +29,7 @@ foreach(AC_REQUIRED_FILE IN LISTS AC_REQUIRED_FILES)
     endif()
 endforeach()
 
-foreach(AC_REQUIRED_DIR IN ITEMS "${AC_SDL_INCLUDE}" "${AC_SDL_CONFIG_INCLUDE}" "${AC_GL4ES_INCLUDE}" "${AC_AUDIO_INCLUDE}" "${AC_ROOT}/source/enet/include")
+foreach(AC_REQUIRED_DIR IN ITEMS "${AC_SDL_INCLUDE}" "${AC_SDL_CONFIG_INCLUDE}" "${AC_SDL_IMAGE_INCLUDE}" "${AC_GL4ES_INCLUDE}" "${AC_AUDIO_INCLUDE}" "${AC_ROOT}/source/enet/include")
     if(NOT IS_DIRECTORY "${AC_REQUIRED_DIR}")
         message(FATAL_ERROR "Missing iOS include directory: ${AC_REQUIRED_DIR}")
     endif()
@@ -37,6 +39,8 @@ add_library(AC_SDL2 STATIC IMPORTED GLOBAL)
 set_target_properties(AC_SDL2 PROPERTIES IMPORTED_LOCATION "${AC_IOS_DEPS_DIR}/SDL2/lib/libSDL2.a" INTERFACE_INCLUDE_DIRECTORIES "${AC_SDL_INCLUDE}")
 add_library(AC_SDL2main STATIC IMPORTED GLOBAL)
 set_target_properties(AC_SDL2main PROPERTIES IMPORTED_LOCATION "${AC_IOS_DEPS_DIR}/SDL2/lib/libSDL2main.a" INTERFACE_INCLUDE_DIRECTORIES "${AC_SDL_INCLUDE}")
+add_library(AC_SDL2_image STATIC IMPORTED GLOBAL)
+set_target_properties(AC_SDL2_image PROPERTIES IMPORTED_LOCATION "${AC_IOS_DEPS_DIR}/SDL2_image/lib/libSDL2_image.a" INTERFACE_INCLUDE_DIRECTORIES "${AC_SDL_IMAGE_INCLUDE}")
 add_library(AC_GL4ES STATIC IMPORTED GLOBAL)
 set_target_properties(AC_GL4ES PROPERTIES IMPORTED_LOCATION "${AC_IOS_DEPS_DIR}/GL4ES/libGL.a" INTERFACE_INCLUDE_DIRECTORIES "${AC_GL4ES_INCLUDE}")
 add_library(AC_OGG STATIC IMPORTED GLOBAL)
@@ -132,6 +136,7 @@ target_include_directories(AssaultCubeEngine PUBLIC
     "${AC_ROOT}/source/enet/include"
     "${AC_SDL_INCLUDE}"
     "${AC_SDL_CONFIG_INCLUDE}"
+    "${AC_SDL_IMAGE_INCLUDE}"
     "${AC_GL4ES_INCLUDE}"
     "${AC_AUDIO_INCLUDE}"
 )
@@ -165,7 +170,7 @@ find_library(AC_COREHAPTICS CoreHaptics)
 # SDL2's iOS bootstrap is linked transitively so SDL2main remains the single
 # UIApplication entry point. Do not define SDL_MAIN_HANDLED in this target.
 target_link_libraries(AssaultCubeEngine PUBLIC
-    AC_SDL2main AC_SDL2 AC_GL4ES AC_VORBISFILE AC_VORBIS AC_OGG AC_ENET
+    AC_SDL2main AC_SDL2 AC_SDL2_image AC_GL4ES AC_VORBISFILE AC_VORBIS AC_OGG AC_ENET
     ${AC_ZLIB} ${AC_OPENAL}
     ${AC_UIKIT} ${AC_FOUNDATION} ${AC_COREGRAPHICS} ${AC_QUARTZCORE}
     ${AC_COREAUDIO} ${AC_AUDIOTOOLBOX} ${AC_AVFOUNDATION} ${AC_COREMOTION}
