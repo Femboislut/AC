@@ -44,10 +44,10 @@
 
 #if defined(TARGET_OS_IOS) && TARGET_OS_IOS
     // Keep SDL's platform and event APIs available: the engine uses SDL types
-    // throughout. SDL_image is not used by the Apple startup path.
+    // throughout, including texture loading via SDL_image.
     #define AC_PLATFORM_IOS 1
     #include <SDL.h>
-    // The only IMG_Load() call is excluded on Apple platforms; SDL_image is not needed on iOS.
+    #include <SDL_image.h>
     // Use GL4ES's desktop-compatible OpenGL headers. They map the engine's
     // fixed-function calls to GL4ES symbols backed by the current GLES context.
     #include <GL/gl.h>
