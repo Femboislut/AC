@@ -7,6 +7,8 @@ on:
       - ios/port-build-infra
     paths:
       - 'ios/Engine/**'
+      - 'ios/AssaultCubeSDLTest/**'
+      - 'ios/project.yml'
       - 'ios/third_party/gl4es/**'
       - 'source/src/**'
       - 'source/enet/**'
@@ -237,6 +239,39 @@ jobs:
           test -f build/package/Engine/lib/libAC_ENET.a
           test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate --spec ios/project.yml
+      - name: Build SDL2 and GL4ES iOS smoke-test app
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          set -o pipefail
+          xcodebuild \
+            -project ios/AssaultCube.xcodeproj \
+            -scheme AssaultCubeSDLTest \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$PWD/build/ios-smoke" \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build/logs/sdl-smoke-build.log
+          APP_PATH="build/ios-smoke/Build/Products/Release-iphoneos/AssaultCubeSDLTest.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
+          mkdir -p build/ios-smoke-ipa/Payload
+          ditto "$APP_PATH" build/ios-smoke-ipa/Payload/AssaultCubeSDLTest.app
+          (cd build/ios-smoke-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-SDL-GL4ES-smoke-test.ipa")
+          unzip -l AssaultCube-SDL-GL4ES-smoke-test.ipa | grep -E "Payload/AssaultCubeSDLTest.app/Info.plist$"
+      - name: Upload SDL / GL4ES smoke-test IPA
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-SDL-GL4ES-smoke-test-IPA
+          path: AssaultCube-SDL-GL4ES-smoke-test.ipa
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload engine diagnostics
         if: always()
         uses: actions/upload-artifact@v4
