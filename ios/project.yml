@@ -142,6 +142,8 @@ targets:
           - "-framework"
           - UIKit
           - "-framework"
+          - CoreBluetooth
+          - "-framework"
           - Foundation
           - "-framework"
           - CoreGraphics
