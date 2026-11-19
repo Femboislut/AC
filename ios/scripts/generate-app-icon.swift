@@ -1,6 +1,7 @@
 #!/usr/bin/swift
 import AppKit
 import CoreGraphics
+import ImageIO
 
 let output = URL(fileURLWithPath: CommandLine.arguments[1])
 let size = 1024
