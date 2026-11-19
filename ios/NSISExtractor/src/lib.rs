@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn refuses_missing_installer() {
         let out = std::env::temp_dir().join(format!("ac-nsis-test-{}", std::process::id()));
-        let result = extract(Path::new("/definitely/not/an/installer.exe"), &out);
+        let result = extract_installer(Path::new("/definitely/not/an/installer.exe"), &out);
         assert!(result.is_err());
     }
 }

@@ -5,7 +5,7 @@ edition = "2024"
 
 [lib]
 name = "ac_nsis_extractor"
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 nsis = { git = "https://github.com/ATRAPSLLC/nsis-rs", rev = "ddab1fd304007cf5a2e1b4b6098a4055b49b48e5" }
