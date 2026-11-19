@@ -78,9 +78,10 @@ private final class ACGameDataBootstrapController: UIViewController, UIDocumentP
         spinner.startAnimating()
         detailLabel.text = "Importing and validating game data. Keep AssaultCube open…"
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        let store = self.store
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, store] in
             do {
-                let status = try self?.store.importItem(at: source)
+                let status = try store.importItem(at: source)
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.spinner.stopAnimating()
