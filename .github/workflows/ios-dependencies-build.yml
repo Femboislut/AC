@@ -127,7 +127,7 @@ jobs:
             -DSDL2IMAGE_TIF=OFF
           cmake --build build/sdl2_image --config Release --target SDL2_image
           mkdir -p build/package/SDL2_image/lib build/package/SDL2_image/include
-          find build/sdl2_image -name 'libSDL2_image*.a' -exec cp -L {} build/package/SDL2_image/lib/ \
+          find build/sdl2_image -name 'libSDL2_image*.a' -exec cp -L {} build/package/SDL2_image/lib/ \\;
           cp -R SDL_image/include/. build/package/SDL2_image/include/
           test -s build/package/SDL2_image/lib/libSDL2_image.a
           test -s build/package/SDL2_image/include/SDL_image.h
