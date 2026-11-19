@@ -1,5 +1,4 @@
 #include <SDL.h>
-#define SDL_MAIN_NEEDED 1
 #include <SDL_main.h>
 #include <GL/gl.h>
 #include <gl4esinit.h>
