@@ -4,6 +4,7 @@ import CoreGraphics
 import ImageIO
 
 let output = URL(fileURLWithPath: CommandLine.arguments[1])
+try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
 let size = 1024
 let colorSpace = CGColorSpaceCreateDeviceRGB()
 let bitmap = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
