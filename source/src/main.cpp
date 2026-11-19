@@ -1,6 +1,9 @@
 // main.cpp: initialisation & main loop
 
 #include "cube.h"
+#if defined(AC_PLATFORM_IOS)
+#include <SDL_main.h>
+#endif
 
 #if defined(AC_PLATFORM_IOS)
 static void close_ios_gl4es();
