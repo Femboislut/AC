@@ -1497,13 +1497,18 @@ int main(int argc, char **argv)
     empty_world(7, true);
 
     initlog("video: sdl");
+    iosstartup_log("video: SDL_InitSubSystem requested");
     if(SDL_InitSubSystem(SDL_INIT_VIDEO)<0) fatal("Unable to initialize SDL Video");
+    iosstartup_log("video: SDL_InitSubSystem succeeded");
 
     initlog("video: mode");
     int useddepthbits = 0, usedfsaa = 0;
+    iosstartup_log("video: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
+    iosstartup_log("video: setupscreen complete");
 
     initlog("video: misc");
+    iosstartup_log("video: misc initialization begin");
 
 #ifndef __APPLE__
     SDL_Surface *icon = IMG_Load("packages/misc/icon.png");
@@ -1518,9 +1523,14 @@ int main(int argc, char **argv)
     SDL_ShowCursor(0);
 
     initlog("gl");
+    iosstartup_log("video: OpenGL extension check begin");
     gl_checkextensions();
+    iosstartup_log("video: OpenGL extension check complete");
+    iosstartup_log("video: gl_init begin");
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
+    iosstartup_log("video: gl_init complete");
 
+    iosstartup_log("video: core texture load begin");
     notexture = noworldtexture = textureload("packages/misc/notexture.jpg");
     iosstartup_log("startup: core texture load attempted");
     if(!notexture) fatal("could not find core textures (hint: run AssaultCube from the parent of the bin directory)");
