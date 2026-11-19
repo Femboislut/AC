@@ -802,22 +802,61 @@ void setuptmu(int n, const char *rgbfunc, const char *alphafunc)
 
 void inittmus()
 {
-    GLint val;
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    iosstartup_log("inittmus: entered");
+#endif
+    GLint val = 0;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
     hwtexsize = val;
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("inittmus: max texture size queried");
+    iosstartup_log(hasTE ? "inittmus: texture-env-combine available" : "inittmus: texture-env-combine unavailable");
+    iosstartup_log(hasMT ? "inittmus: multitexture advertised" : "inittmus: multitexture not advertised");
+#endif
 
     if(hasTE && !hasMT) maxtmus = 1;
     else if(hasTE && hasMT)
     {
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("inittmus: querying texture unit count");
+#endif
         glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &val);
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("inittmus: texture unit count queried");
+#endif
         maxtmus = max(1, min(MAXTMUS, int(val)));
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("inittmus: beginning texture unit setup");
+#endif
         loopi(maxtmus)
         {
+            if(!glActiveTexture_)
+            {
+#if defined(AC_PLATFORM_IOS)
+                iosstartup_log("inittmus: ERROR glActiveTextureARB is null; disabling multitexture");
+#endif
+                hasMT = false;
+                maxtmus = 1;
+                break;
+            }
             glActiveTexture_(GL_TEXTURE0_ARB+i);
+#if defined(AC_PLATFORM_IOS)
+            iosstartup_log("inittmus: texture unit activated");
+#endif
             resettmu(i);
+#if defined(AC_PLATFORM_IOS)
+            iosstartup_log("inittmus: texture unit reset");
+#endif
         }
-        glActiveTexture_(GL_TEXTURE0_ARB);
+        if(hasMT) glActiveTexture_(GL_TEXTURE0_ARB);
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("inittmus: texture unit setup complete");
+#endif
     }
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("inittmus: complete");
+#endif
 }
 
 void cleanuptmus()
