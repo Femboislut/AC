@@ -5,10 +5,11 @@
 
 #include <stdio.h>
 
+static SDL_Window *main_window = NULL;
+
 static void get_main_framebuffer_size(int *width, int *height)
 {
-    SDL_Window *window = SDL_GetKeyboardFocus();
-    if(window) SDL_GL_GetDrawableSize(window, width, height);
+    if(main_window) SDL_GL_GetDrawableSize(main_window, width, height);
     else { *width = 0; *height = 0; }
 }
 
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
-    SDL_Window *window = SDL_CreateWindow(
+    main_window = SDL_CreateWindow(
         "AssaultCube SDL / GL4ES Test",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
@@ -38,18 +39,18 @@ int main(int argc, char **argv)
         540,
         SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI
     );
-    if(!window)
+    if(!main_window)
     {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         SDL_Quit();
         return 2;
     }
 
-    SDL_GLContext context = SDL_GL_CreateContext(window);
+    SDL_GLContext context = SDL_GL_CreateContext(main_window);
     if(!context)
     {
         fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
+        SDL_DestroyWindow(main_window);
         SDL_Quit();
         return 3;
     }
@@ -92,14 +93,14 @@ int main(int argc, char **argv)
         }
 
         int width = 0, height = 0;
-        SDL_GL_GetDrawableSize(window, &width, &height);
+        SDL_GL_GetDrawableSize(main_window, &width, &height);
         glViewport(0, 0, width, height);
 
         // A changing clear colour makes a frozen frame or failed swap obvious.
         float phase = (float)(frame % 240) / 239.0f;
         glClearColor(0.08f + phase * 0.25f, 0.16f, 0.30f + (1.0f - phase) * 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        SDL_GL_SwapWindow(window);
+        SDL_GL_SwapWindow(main_window);
         frame++;
         SDL_Delay(1);
     }
