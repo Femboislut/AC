@@ -12,6 +12,7 @@ on:
       - 'ios/AssaultCubeApp/**'
       - 'ios/NSISExtractor/**'
       - 'ios/project.yml'
+      - 'ios/scripts/generate-app-icon.swift'
       - 'ios/third_party/gl4es/**'
       - 'source/src/**'
       - 'source/enet/**'
@@ -263,6 +264,8 @@ jobs:
           cp ios/NSISExtractor/target/aarch64-apple-ios/release/libac_nsis_extractor.a build/nsis-target/aarch64-apple-ios/release/
       - name: Install XcodeGen
         run: brew install xcodegen
+      - name: Generate AssaultCube app icon
+        run: swift ios/scripts/generate-app-icon.swift ios/AssaultCubeApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml
