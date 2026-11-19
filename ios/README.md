@@ -1,68 +1,61 @@
-# AssaultCube iOS port
+# iOS port development notes
 
-This directory contains the native iOS data-import prototype and the first native engine build scaffold. The app is not yet a playable AssaultCube port.
+This document records the current status, build pipeline, import procedure, and implementation plan. It distinguishes CI build evidence from actual device validation.
 
-## Current status
+## Status
 
-- The SwiftUI data importer validates and stores imported AssaultCube game data.
-- The existing GLKit/Objective-C++ bridge is a placeholder; it does not start the C++ engine.
-- `ios/Engine/CMakeLists.txt` now defines a static `AssaultCubeEngine` target from the current desktop client source list and compiles ENet from source.
-- The manual dependency workflow has successfully built and packaged SDL2, GL4ES, Ogg/Vorbis, ENet and the AssaultCube engine as ARM64 static libraries (Build #25).
-- A separate `AssaultCubeSDLTest` target now exercises SDL's UIKit bootstrap, GLES2 context creation, GL4ES initialization, frame presentation and app lifecycle events. Its first CI build is pending; no physical-device result is claimed.
-- The SDL/GL4ES smoke-test IPA, if CI builds it, is a renderer/bootstrap test only. It does not contain or launch AssaultCube gameplay.
+**Experimental; not yet verified playable on a physical iPhone.**
 
-## Import the Windows game installer on an iPhone
+### Verified
+- The SwiftUI data importer has been installed and tested on an iPhone.
+- It validated **1,829 files / approximately 49 MB** from the official Windows installer.
+- CI previously compiled ARM64 SDL2, GL4ES, Ogg/Vorbis, ENet, and the AssaultCube engine library.
+- The SDL/GL4ES smoke-test IPA is a renderer/bootstrap test, not gameplay.
 
-The iOS importer accepts the official Windows AssaultCube installer as a **data source**. It does not run the Windows program, and the imported files alone do not make this prototype playable; the native iOS game engine still has to be integrated.
+### Current build issue and fix
+Run #43 failed in the final app link: SDL's Bluetooth HID object referenced CoreBluetooth symbols, but the game target didn't link CoreBluetooth. Added the framework to the AssaultCubeGame target. The follow-up CI run will verify the correction.
 
-1. Download the official Windows `.exe` installer from the [AssaultCube downloads page](https://assault.cubers.net/download.html) and keep it in the iPhone's Files app.
-2. In Files, locate the downloaded AssaultCube `.exe`, touch and hold it (or open its Share menu), then tap **Share**.
-3. Choose **AssaultCube iOS** in the share sheet. If you are running the importer through **LiveContainer**, choose **LiveContainer** in the share sheet instead, then select/open the AssaultCube importer from LiveContainer.
-4. In the importer, select the shared installer if prompted and wait for extraction and validation to finish. The app should report **Valid game data found** and show the imported file count and storage size.
+## Import game data from an iPhone
 
-If the app does not appear in the share sheet, first open/install it in the iOS environment you are using, then try the Share action again. The Windows `.exe` is only used to extract game assets; Windows executables and DLLs are not executed on iOS.
+1. Download the official Windows AssaultCube installer from [the official downloads page](https://assault.cubers.net/download.html).
+2. Keep the `.exe` in Files.
+3. Long-press it, tap **Share**, and select the importer. If you're using LiveContainer, share the file to LiveContainer and open the importer there.
+4. Complete the import and verify the valid-data message.
 
-## Latest importer test
+This extracts data only. The installer and Windows executables/DLLs are never run.
 
-The **iOS ARM64 dependency build** workflow successfully produced the data-importer IPA in [Run #42](https://github.com/TangiDev69/AC/actions/runs/44590796824). It was installed and tested on an iPhone: the importer reported valid game data (1,829 files, 49 MB). This confirms the installer-import and validation path, **not** game launch or gameplay. The separate SDL/GL4ES smoke-test IPA is also not the game.
+## Planned mobile experience
 
-## Architecture
+These are goals, not claims of completed functionality:
 
-SDL2 must own the iOS application bootstrap, game window, OpenGL ES context and event loop. The `AssaultCubeSDLTest` XcodeGen target is kept separate from the SwiftUI data importer and provides the first executable integration proof. It links the exact ARM64 SDL2 and GL4ES archives produced earlier in the same workflow. The current SwiftUI `@main` shell and GLKit context are not connected to the engine because they conflict with SDL's UIKit bootstrap/window ownership. The preferred first integration is a minimal SDL-owned app; the data-import/settings UI can be moved into UIKit after that lifecycle proof.
+- SDL-owned iOS app lifecycle and engine launch.
+- Native game-data and profile path handoff (`Documents/GameData` and `Documents/Profile`).
+- Touch HUD: joystick, camera-look zone, fire, jump, crouch, reload, weapon switch; multi-touch and independent look/fire; movable, resizable, opacity-adjustable controls and saved layouts.
+- Gyroscope aiming using CoreMotion: enable/disable, calibration, sensitivity, horizontal/vertical inversion and mode options.
+- Bluetooth controller support: configurable mapping, dead zones and vibration where supported.
+- In-game settings pages: controls, gyro, graphics, FOV, crosshair, HUD, audio, gameplay and accessibility.
+- Multiplayer UI improvements: server list refresh, favourites, ping, direct connect and reconnect.
+- Stable lifecycle: suspend/resume, safe config saving, and performance options.
 
-GL4ES is the compatibility layer for the engine's desktop fixed-function OpenGL calls. The engine requests an ES2 context and initializes GL4ES through SDL on iOS. The iOS-only depth-readback fallback and renderer integration remain uncompiled and untested.
+## Build workflow
 
-## SDL / GL4ES smoke test
+The [iOS ARM64 dependency build](../.github/workflows/ios-dependencies-build.yml) builds the pinned dependencies, engine, importer, smoke test, and game app.
 
-The **iOS ARM64 dependency build** workflow now also builds `AssaultCubeSDLTest` after the static libraries are verified. A successful run uploads `AssaultCube-SDL-GL4ES-smoke-test-IPA`. This test should show a continuously changing clear-colour frame; it verifies SDL UIKit startup, an ES2 context, GL4ES initialization and frame swapping. It is not a game build and does not prove that the AssaultCube renderer or engine is integrated. It still requires installation and physical-device testing for background/resume behavior.
+CI artifacts are temporary test outputs. Only a device-tested IPA should be promoted to a GitHub Release.
 
-## Build the native engine static library
+## Runtime architecture notes
 
-1. Open the repository's [Actions](https://github.com/Femboislut/AC/actions) page.
-2. Run **iOS ARM64 dependency build** manually. This workflow builds the pinned SDL2, GL4ES, libogg and libvorbis dependencies, then compiles `AssaultCubeEngine`.
-3. Download the `AssaultCube-iOS-ARM64-dependencies` artifact from the successful run.
-4. Extract the archive into `ios/Dependencies/`. It should create `SDL2/`, `GL4ES/`, `Audio/` and `Engine/` directories.
+SDL2 should own the UIKit application entry point, window, GLES context and event loop. GL4ES provides compatibility for the engine's desktop OpenGL calls. The importer is a separate prototype target; do not assume its SwiftUI interface or settings currently appear in the game.
 
-Equivalent local CMake configure/build commands (with Xcode, CMake, and the pinned `ios-cmake` toolchain already available):
+## Development quality gate
 
-```sh
-cmake -S ios/Engine -B build/engine -G Xcode \
-  -DCMAKE_TOOLCHAIN_FILE="$PWD/ios-cmake/ios.toolchain.cmake" \
-  -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
-  -DAC_IOS_DEPS_DIR="$PWD/ios/Dependencies"
-cmake --build build/engine --config Release --target AssaultCubeEngine
-```
+Before describing a build as playable, verify on-device:
+1. App launches and doesn't immediately crash.
+2. Imported assets are discovered and the initial map/menu loads.
+3. Touch movement, looking, firing, multi-touch, and buttons work without interfering.
+4. Gyroscope responds correctly in both axes, including calibration and inversion.
+5. Controller input and reconnect behaviour are tested.
+6. Graphics, sound, settings persistence, background/resume and quit are checked.
+7. Multiplayer server discovery and direct connection are tested, with limitations documented.
 
-The resulting `libAssaultCubeEngine.a` is a static engine library, **not an app**. It still needs an SDL-owned iOS application target, lifecycle integration, and physical-device testing.
-
-## Build the data-management shell
-
-The separate **Manual iOS app-shell archive (not playable)** workflow can archive the SwiftUI data-management prototype. Its unsigned IPA does not compile or launch the C++ AssaultCube engine and is not a playable game.
-
-## Game data and runtime paths
-
-The importer stores data in `Documents/GameData`. The engine accepts `--mod=<path>` for the data search path and `--home=<path>` for its writable profile. The planned runtime layout is `Documents/GameData` plus `Documents/Profile`; this handoff has not yet been implemented.
-
-See [ENGINEERING_PLAN.md](ENGINEERING_PLAN.md), [the input port audit](../docs/ios-mobile-input-port-audit.md), [the game-data path audit](../docs/ios-game-data-path-audit.md), and [the engineering status](../docs/ios-port-engineering-status.md) for details.
-
-The Windows executable and DLLs are not part of the iOS runtime. Only game data is imported; AssaultCube itself must run as native ARM64 iOS code.
+Until those checks pass, keep the project marked experimental.
