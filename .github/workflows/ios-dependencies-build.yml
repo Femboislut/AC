@@ -29,7 +29,7 @@ concurrency:
 jobs:
   build-dependencies:
     name: Build SDL2, GL4ES and Ogg/Vorbis sequentially
-    runs-on: macos-26-intel
+    runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - name: Check out AssaultCube and GL4ES submodule
