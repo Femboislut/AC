@@ -30,6 +30,8 @@ static void iosstartup_log(const char *message)
     fprintf(stderr, "[AC-iOS] %s\\n", message ? message : "(null)");
     fflush(stderr);
 }
+#else
+static void iosstartup_log(const char *) {}
 #endif
 
 void cleanup(char *msg)         // single program exit point;
