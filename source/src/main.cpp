@@ -7,6 +7,31 @@
 
 #if defined(AC_PLATFORM_IOS)
 static void close_ios_gl4es();
+
+// Persist early startup breadcrumbs to Documents so a crash before clientlog
+// initialization can still be diagnosed on-device through Files sharing.
+static void iosstartup_log(const char *message)
+{
+    const char *home = getenv("HOME");
+    if(home && *home)
+    {
+        static char path[4096];
+        if(snprintf(path, sizeof(path), "%s/Documents/AssaultCubeStartup.log", home) > 0)
+        {
+            FILE *log = fopen(path, "a");
+            if(log)
+            {
+                fprintf(log, "%s\\n", message ? message : "(null)");
+                fflush(log);
+                fclose(log);
+            }
+        }
+    }
+    fprintf(stderr, "[AC-iOS] %s\\n", message ? message : "(null)");
+    fflush(stderr);
+}
+#else
+static void iosstartup_log(const char *) {}
 #endif
 
 void cleanup(char *msg)         // single program exit point;
@@ -719,8 +744,12 @@ void resetgl()
     c2skeepalive();
 
     int useddepthbits = 0, usedfsaa = 0;
+    iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
+    iosstartup_log("startup: setupscreen done");
+    iosstartup_log("startup: gl_init begin");
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
+    iosstartup_log("startup: gl_init done");
 
     extern void reloadfonts();
     extern Texture *startscreen;
@@ -1263,6 +1292,7 @@ void sanitychecks()
 int main(int argc, char **argv)
 {
 #if defined(AC_PLATFORM_IOS)
+    iosstartup_log("START: engine main() entered");
     // The importer and game target deliberately share the same bundle identifier,
     // so an app update retains Documents/GameData imported by the previous IPA.
     // Supply the sandbox paths before AssaultCube parses its normal CLI options.
@@ -1291,6 +1321,7 @@ int main(int argc, char **argv)
         }
     }
 #endif
+    iosstartup_log("startup: arguments prepared");
     DEBUGCODE(sanitychecks());
     extern struct servercommandline scl;
     #ifdef WIN32
@@ -1311,6 +1342,7 @@ int main(int argc, char **argv)
     char *initscript = NULL;
     char *initdemo = NULL;
 
+    iosstartup_log("startup: locale and logging initialization");
     setlocale(LC_ALL, "POSIX");
     if(bootclientlog) cvecprintf(*bootclientlog, "######## start logging: %s\n", timestring(true));
 
@@ -1425,7 +1457,9 @@ int main(int argc, char **argv)
 #ifdef _DEBUG
     par = SDL_INIT_NOPARACHUTE;
 #endif
+    iosstartup_log("startup: SDL_Init requested");
     if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|par)<0) fatal("Unable to initialize SDL");
+    iosstartup_log("startup: SDL_Init succeeded");
     SDL_version sdlver;
     SDL_GetVersion(&sdlver);
     if(SDL_COMPILEDVERSION != SDL_VERSIONNUM(sdlver.major, sdlver.minor, sdlver.patch))
@@ -1436,13 +1470,20 @@ int main(int argc, char **argv)
 #endif
 
     if (!dedicated) initlog("net (" STRINGIFY(ENET_VERSION_MAJOR) "." STRINGIFY(ENET_VERSION_MINOR) "." STRINGIFY(ENET_VERSION_PATCH) ")");
+    iosstartup_log("startup: ENet initialize");
     if(enet_initialize()<0) fatal("Unable to initialise network module");
+    iosstartup_log("startup: ENet initialized");
 
+    iosstartup_log("startup: initclient begin");
     if (!dedicated) initclient();
+    iosstartup_log("startup: initclient done");
 
+    iosstartup_log("startup: initserver begin");
     initserver(dedicated);  // never returns if dedicated
+    iosstartup_log("startup: initserver returned");
 
     initlog("world (" STRINGIFY(AC_VERSION) ")");
+    iosstartup_log("startup: empty_world");
     empty_world(7, true);
 
     initlog("video: sdl");
@@ -1471,12 +1512,14 @@ int main(int argc, char **argv)
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
 
     notexture = noworldtexture = textureload("packages/misc/notexture.jpg");
+    iosstartup_log("startup: core texture load attempted");
     if(!notexture) fatal("could not find core textures (hint: run AssaultCube from the parent of the bin directory)");
 
     initlog("console");
     updateigraphs();
     autostartscripts("_veryfirst_");
     // Main font file, all other font files execute from here.
+    iosstartup_log("startup: font config load");
     if(!execfile("config/font.cfg")) fatal("cannot find default font definitions");
     // Check these 2 standard fonts have been executed.
     if(!setfont("mono")) fatal("no mono font specified");
@@ -1487,6 +1530,7 @@ int main(int argc, char **argv)
     particleinit();
 
     initlog("sound");
+    iosstartup_log("startup: audio init");
     audiomgr.initsound();
 
     initlog("cfg");
@@ -1585,6 +1629,7 @@ int main(int argc, char **argv)
     else
     copystring(clientmap, initmap); // ac_complex for 1.0, ac_shine for 1.1, ..
 
+    iosstartup_log("startup: localconnect");
     localconnect();
 
     if(initscript) execute(initscript);
@@ -1593,6 +1638,7 @@ int main(int argc, char **argv)
 
     inputgrab(grabinput = true);
 
+    iosstartup_log("startup: main loop reached");
     inmainloop = true;
     static bool onceauthed = true;
 #ifdef _DEBUG
