@@ -15,7 +15,7 @@ fn write_error(out: *mut c_char, capacity: usize, message: &str) {
     }
 }
 
-fn extract(input: &Path, output: &Path) -> Result<(), String> {
+pub fn extract_installer(input: &Path, output: &Path) -> Result<(), String> {
     let metadata = fs::metadata(input).map_err(|e| format!("Cannot read installer: {e}"))?;
     if metadata.len() == 0 || metadata.len() > MAX_INPUT {
         return Err("Installer is empty or exceeds the 256 MB safety limit.".into());
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn ac_nsis_extract(
     }
     let input = unsafe { CStr::from_ptr(input_path) }.to_string_lossy();
     let output = unsafe { CStr::from_ptr(output_path) }.to_string_lossy();
-    match extract(Path::new(input.as_ref()), Path::new(output.as_ref())) {
+    match extract_installer(Path::new(input.as_ref()), Path::new(output.as_ref())) {
         Ok(()) => 0,
         Err(error) => { write_error(error_buffer, error_capacity, &error); 1 }
     }
