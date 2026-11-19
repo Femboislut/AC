@@ -20,7 +20,7 @@ on:
       - 'scripts/validate-ios-engine-source-list.py'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ios-arm64-dependencies-${{ github.ref }}
@@ -269,31 +269,6 @@ jobs:
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml
-      - name: Build AssaultCube data importer app
-        run: |
-          set -euo pipefail
-          mkdir -p build/logs
-          xcodebuild \
-            -project ios/AssaultCube.xcodeproj \
-            -scheme AssaultCube \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            -derivedDataPath "$PWD/build/ios-importer" \
-            CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee build/logs/importer-build.log
-          APP_PATH="build/ios-importer/Build/Products/Release-iphoneos/AssaultCube.app"
-          test -d "$APP_PATH"
-          mkdir -p build/ios-importer-ipa/Payload
-          ditto "$APP_PATH" build/ios-importer-ipa/Payload/AssaultCube.app
-          (cd build/ios-importer-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-iOS-Data-Importer.ipa")
-      - name: Upload AssaultCube data importer IPA
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: AssaultCube-iOS-Data-Importer-IPA
-          path: AssaultCube-iOS-Data-Importer.ipa
-          if-no-files-found: error
-          retention-days: 14
       - name: Build SDL2 and GL4ES iOS smoke-test app
         run: |
           set -euo pipefail
@@ -315,15 +290,6 @@ jobs:
           ditto "$APP_PATH" build/ios-smoke-ipa/Payload/AssaultCubeSDLTest.app
           (cd build/ios-smoke-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-SDL-GL4ES-smoke-test.ipa")
           unzip -l AssaultCube-SDL-GL4ES-smoke-test.ipa | grep -E "Payload/AssaultCubeSDLTest.app/Info.plist$"
-      - name: Upload SDL / GL4ES smoke-test IPA
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: AssaultCube-SDL-GL4ES-smoke-test-IPA
-          path: AssaultCube-SDL-GL4ES-smoke-test.ipa
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Build native AssaultCube game app
         run: |
           set -euo pipefail
@@ -344,14 +310,29 @@ jobs:
           ditto "$APP_PATH" build/ios-game-ipa/Payload/AssaultCube.app
           (cd build/ios-game-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-iOS-Game.ipa")
           unzip -l AssaultCube-iOS-Game.ipa | grep -E "Payload/AssaultCube.app/Info.plist$"
-      - name: Upload native AssaultCube game IPA
-        if: success()
-        uses: actions/upload-artifact@v4
+      - name: Verify final app identity and icon
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios-game/Build/Products/Release-iphoneos/AssaultCube.app"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist" | grep -Fx "net.cubers.assaultcube.ios"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$APP_PATH/Info.plist" | grep -Fx "AppIcon"
+          test -s "$APP_PATH/Assets.car"
+          test -s "$APP_PATH/Info.plist"
+          echo "Verified app bundle metadata and compiled asset catalog."
+      - name: Publish direct IPA release asset
+        uses: softprops/action-gh-release@v2
         with:
-          name: AssaultCube-iOS-Game-IPA
-          path: AssaultCube-iOS-Game.ipa
-          if-no-files-found: error
-          retention-days: 14
+          tag_name: ios-ipa-${{ github.run_number }}-${{ github.run_attempt }}
+          name: AssaultCube iOS build ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Direct IPA download for LiveContainer / compatible sideloading workflows.
+            This is the only installable IPA published by this workflow.
+            The IPA is not wrapped in a GitHub Actions artifact ZIP.
+          files: AssaultCube-iOS-Game.ipa
       - name: Upload engine diagnostics
         if: always()
         uses: actions/upload-artifact@v4
