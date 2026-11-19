@@ -107,7 +107,8 @@ int main(int argc, char **argv)
 
     close_gl4es();
     SDL_GL_DeleteContext(context);
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(main_window);
+    main_window = NULL;
     SDL_Quit();
     return 0;
 }
