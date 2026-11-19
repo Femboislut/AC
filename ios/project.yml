@@ -29,3 +29,54 @@ targets:
         SUPPORTS_MACCATALYST: "NO"
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGNING_ALLOWED: "NO"
+
+  AssaultCubeSDLTest:
+    type: application
+    platform: iOS
+    sources:
+      - path: AssaultCubeSDLTest/main.c
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.sdltest
+        PRODUCT_NAME: AssaultCubeSDLTest
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: "AC SDL Test"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/package/SDL2/include"
+          - "$(SRCROOT)/../build/package/GL4ES/include"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2main.a"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2.a"
+          - "$(SRCROOT)/../build/package/GL4ES/libGL.a"
+          - "-framework"
+          - UIKit
+          - "-framework"
+          - Foundation
+          - "-framework"
+          - CoreGraphics
+          - "-framework"
+          - QuartzCore
+          - "-framework"
+          - CoreAudio
+          - "-framework"
+          - AudioToolbox
+          - "-framework"
+          - AVFoundation
+          - "-framework"
+          - CoreMotion
+          - "-framework"
+          - CoreVideo
+          - "-framework"
+          - OpenGLES
+          - "-framework"
+          - Metal
+          - "-weak_framework"
+          - GameController
+          - "-weak_framework"
+          - CoreHaptics
+        CODE_SIGNING_ALLOWED: "NO"
