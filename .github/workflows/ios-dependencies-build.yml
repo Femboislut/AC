@@ -130,6 +130,26 @@ jobs:
           cp build/install/lib/libvorbisenc.a build/package/Audio/lib/
           cp -R build/install/include/ogg build/package/Audio/include/
           cp -R build/install/include/vorbis build/package/Audio/include/vorbis/
+      - name: Apply Darwin-compatible GL4ES aliases
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("ios/third_party/gl4es/src/gl/directstate.c")
+          source = path.read_text()
+          replacements = {
+              "AliasDecl(void,gl4es_glEnableClientStatei,(GLenum array, GLuint index),gl4es_glEnableClientStateIndexed);":
+                  "void APIENTRY_GL4ES gl4es_glEnableClientStatei(GLenum array, GLuint index) { gl4es_glEnableClientStateIndexed(array, index); }",
+              "AliasDecl(void,gl4es_glDisableClientStatei,(GLenum array, GLuint index),gl4es_glDisableClientStateIndexed);":
+                  "void APIENTRY_GL4ES gl4es_glDisableClientStatei(GLenum array, GLuint index) { gl4es_glDisableClientStateIndexed(array, index); }",
+          }
+          for old, new in replacements.items():
+              if old not in source:
+                  raise SystemExit(f"Expected GL4ES alias declaration not found: {old}")
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          print("Applied two Darwin-safe GL4ES forwarding functions.")
+          PY
       - name: Build GL4ES for arm64 iOS
         run: |
           set -euo pipefail
