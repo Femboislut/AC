@@ -314,8 +314,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist" | grep -Fx "net.cubers.assaultcube.ios"
           /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
           /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$APP_PATH/Info.plist" | grep -Fx "AppIcon"
           test -s "$APP_PATH/Assets.car"
+          test -s "AssaultCube-iOS-Game.ipa"
+          unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/Assets.car"
+          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/Info.plist > build/game-Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/game-Info.plist | grep -Fx "net.cubers.assaultcube.ios"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" build/game-Info.plist | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" build/game-Info.plist | grep -Fx "AssaultCube"
           test -s "$APP_PATH/Info.plist"
           echo "Verified app bundle metadata and compiled asset catalog."
       - name: Publish direct IPA release asset
