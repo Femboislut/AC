@@ -95,3 +95,77 @@ targets:
           - "-weak_framework"
           - CoreHaptics
         CODE_SIGNING_ALLOWED: "NO"
+
+  AssaultCubeGame:
+    type: application
+    platform: iOS
+    sources:
+      - path: AssaultCubeGame/BootstrapAnchor.m
+      - path: Engine
+        compilerFlags: ["-x", "objective-c++"]
+    resources:
+      - path: NSISExtractor/LICENSE
+      - path: NSISExtractor/NOTICE
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.ios
+        PRODUCT_NAME: AssaultCube
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: "AssaultCube"
+        INFOPLIST_KEY_UIFileSharingEnabled: "YES"
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: "YES"
+        INFOPLIST_KEY_UIRequiresFullScreen: "YES"
+        CODE_SIGNING_ALLOWED: "NO"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/package/SDL2/include"
+          - "$(SRCROOT)/../build/package/SDL2/include/SDL2"
+          - "$(SRCROOT)/../build/package/SDL2_image/include"
+          - "$(SRCROOT)/../build/package/GL4ES/include"
+          - "$(SRCROOT)/../build/package/Audio/include"
+          - "$(SRCROOT)/../source/src"
+          - "$(SRCROOT)/../source/enet/include"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2main.a"
+          - "$(SRCROOT)/../build/package/Engine/lib/libAssaultCubeEngine.a"
+          - "$(SRCROOT)/../build/package/Engine/lib/libAC_ENET.a"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2.a"
+          - "$(SRCROOT)/../build/package/SDL2_image/lib/libSDL2_image.a"
+          - "$(SRCROOT)/../build/package/GL4ES/libGL.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libvorbisfile.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libvorbis.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libogg.a"
+          - "-lc++"
+          - "-lz"
+          - "-framework"
+          - UIKit
+          - "-framework"
+          - Foundation
+          - "-framework"
+          - CoreGraphics
+          - "-framework"
+          - QuartzCore
+          - "-framework"
+          - CoreAudio
+          - "-framework"
+          - AudioToolbox
+          - "-framework"
+          - AVFoundation
+          - "-framework"
+          - CoreMotion
+          - "-framework"
+          - CoreVideo
+          - "-framework"
+          - OpenGLES
+          - "-framework"
+          - Metal
+          - "-framework"
+          - OpenAL
+          - "-weak_framework"
+          - GameController
+          - "-weak_framework"
+          - CoreHaptics
