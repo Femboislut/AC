@@ -651,16 +651,25 @@ void nextplayerstart(int *type)
 
 COMMAND(nextplayerstart, "i");
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#define IOS_WORLD_LOG(message) iosstartup_log(message)
+#else
+#define IOS_WORLD_LOG(message) ((void)0)
+#endif
+
 sqr *wmip[LARGEST_FACTOR*2];
 
 void setupworld(int factor)
 {
+    IOS_WORLD_LOG("world: setupworld begin");
     ssize = 1<<(sfactor = factor);
     cubicsize = ssize*ssize;
     mipsize = cubicsize*134/100;
     sqr *w = world = new sqr[mipsize];
     memset(world, 0, mipsize*sizeof(sqr));
     loopi(LARGEST_FACTOR*2) { wmip[i] = w; w += cubicsize>>(i*2); }
+    IOS_WORLD_LOG("world: setupworld complete");
 }
 
 void sqrdefault(sqr *s)
@@ -694,6 +703,7 @@ bool worldbordercheck(int x1, int x2, int y1, int y2, int z1, int z2)  // check 
 
 bool empty_world(int factor, bool force)    // main empty world creation routine, if passed factor -1 will enlarge old world by 1, factor -2 will shrink old world by 1
 {
+    IOS_WORLD_LOG("world: empty_world entered");
     if(!force && noteditmode("empty world")) return false;
     if(factor < -2) return false;
     if(factor == -1 && multiplayer() && sfactor > 9) return false;
@@ -712,13 +722,17 @@ bool empty_world(int factor, bool force)    // main empty world creation routine
 
     DELETEA(world);
 
+    IOS_WORLD_LOG("world: before setupworld");
     setupworld(factor);
+    IOS_WORLD_LOG("world: before square initialization");
     loop(x,ssize) loop(y,ssize)
     {
         sqrdefault(S(x,y));
     }
 
+    IOS_WORLD_LOG("world: square initialization complete");
     checkselections(); // assert no selection became invalid
+    IOS_WORLD_LOG("world: checkselections complete");
 
     if(copy)
     {
@@ -740,6 +754,7 @@ bool empty_world(int factor, bool force)    // main empty world creation routine
         int oldunsavededits = unsavededits;
         memset(&hdr, 0, sizeof(header));
         mapconfigdata.clear();
+        IOS_WORLD_LOG("world: initializing new map header");
         formatstring(hdr.maptitle)("Untitled Map by %s", player1->name);
         setfvar("waterlevel", -10000);
         hdr.waterlevel = waterlevel * WATERLEVELSCALING;
@@ -750,17 +765,23 @@ bool empty_world(int factor, bool force)    // main empty world creation routine
         edittypexy(SPACE, b);
         clearheaderextras();
         unsavededits = oldunsavededits;
+        IOS_WORLD_LOG("world: new map metadata complete");
     }
     memcpy(hdr.head, "ACMP", 4);
     hdr.version = MAPVERSION;
     hdr.headersize = sizeof(header);
     hdr.sfactor = sfactor;
 
+    IOS_WORLD_LOG("world: before createservworld");
     servsqr *servworld = createservworld(world, cubicsize);
+    IOS_WORLD_LOG("world: createservworld complete");
     calcmapdims(clmapdims, servworld, ssize);
     delete[] servworld;
+    IOS_WORLD_LOG("world: before calclight");
     calclight();
+    IOS_WORLD_LOG("world: calclight complete");
     resetmap(!copy);
+    IOS_WORLD_LOG("world: resetmap complete");
     if(clearmap)
     {
         pushscontext(IEXC_MAPCFG);
@@ -771,11 +792,15 @@ bool empty_world(int factor, bool force)    // main empty world creation routine
     }
     if(!copy)
     {
+        IOS_WORLD_LOG("world: before findplayerstart");
         findplayerstart(player1, true);
+        IOS_WORLD_LOG("world: before startmap");
         startmap("newmap", false);
+        IOS_WORLD_LOG("world: startmap complete");
     }
     else conoutf("new map size: %d", sfactor);
     freeblock(ow);
+    IOS_WORLD_LOG("world: empty_world complete");
     return true;
 }
 
