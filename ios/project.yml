@@ -103,10 +103,10 @@ targets:
     platform: iOS
     sources:
       - path: AssaultCubeGame/BootstrapAnchor.m
+      - path: AssaultCubeApp/Assets.xcassets
     resources:
       - path: NSISExtractor/LICENSE
       - path: NSISExtractor/NOTICE
-      - path: AssaultCubeApp/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.ios
@@ -118,6 +118,8 @@ targets:
         SUPPORTS_MACCATALYST: "NO"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: "AssaultCube"
+        INFOPLIST_KEY_CFBundleName: "AssaultCube"
+        INFOPLIST_KEY_CFBundleIconName: "AppIcon"
         INFOPLIST_KEY_CFBundleShortVersionString: "1.0"
         INFOPLIST_KEY_CFBundleVersion: "1"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.games"
