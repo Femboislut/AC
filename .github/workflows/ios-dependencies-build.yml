@@ -269,11 +269,10 @@ jobs:
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml
-      - name: Build SDL2 and GL4ES iOS smoke-test app
+      - name: Build and verify SDL2 / GL4ES smoke-test target
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          set -o pipefail
           xcodebuild \
             -project ios/AssaultCube.xcodeproj \
             -scheme AssaultCubeSDLTest \
@@ -286,10 +285,8 @@ jobs:
           test -d "$APP_PATH"
           test -f "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
-          mkdir -p build/ios-smoke-ipa/Payload
-          ditto "$APP_PATH" build/ios-smoke-ipa/Payload/AssaultCubeSDLTest.app
-          (cd build/ios-smoke-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-SDL-GL4ES-smoke-test.ipa")
-          unzip -l AssaultCube-SDL-GL4ES-smoke-test.ipa | grep -E "Payload/AssaultCubeSDLTest.app/Info.plist$"
+          echo "SDL2 / GL4ES smoke-test target compiled; no separate IPA is published."
+
       - name: Build native AssaultCube game app
         run: |
           set -euo pipefail
