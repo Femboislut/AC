@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: ios-arm64-dependencies-${{ github.ref }}
-  cancel-in-progress: true
+  # Serialize expensive native builds; do not cancel a healthy run when a follow-up commit lands.
+  cancel-in-progress: false
 
 jobs:
   build-dependencies:
@@ -141,11 +142,14 @@ jobs:
       - name: Compile AssaultCube engine sources for arm64 iOS
         run: |
           set -euo pipefail
+          mkdir -p build/logs
           cmake -S ios/Engine -B build/engine -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
             -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
-            -DAC_IOS_DEPS_DIR="$GITHUB_WORKSPACE/build/package"
-          cmake --build build/engine --config Release --target AssaultCubeEngine
+            -DAC_IOS_DEPS_DIR="$GITHUB_WORKSPACE/build/package" \
+            2>&1 | tee build/logs/engine-configure.log
+          cmake --build build/engine --config Release --target AssaultCubeEngine \
+            2>&1 | tee build/logs/engine-build.log
           mkdir -p build/package/Engine/lib
           find build/engine -type f -name 'libAssaultCubeEngine.a' -exec cp {} build/package/Engine/lib/ +
           find build/engine -type f -name 'libAC_ENET.a' -exec cp {} build/package/Engine/lib/ +
@@ -166,6 +170,14 @@ jobs:
           test -f build/package/Engine/lib/libAC_ENET.a
           test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
+      - name: Upload engine diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-engine-diagnostics
+          path: build/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload combined dependency artifact
         uses: actions/upload-artifact@v4
         with:
