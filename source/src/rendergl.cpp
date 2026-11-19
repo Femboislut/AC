@@ -127,30 +127,56 @@ void gl_checkextensions()
 
 void gl_init(int w, int h, int depth, int fsaa)
 {
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    iosstartup_log("gl_init: entered");
+#endif
     //#define fogvalues 0.5f, 0.6f, 0.7f, 1.0f
 
     glViewport(0, 0, w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: glViewport complete");
+#endif
     glClearDepth(1.0);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: glClearDepth complete");
+#endif
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: depth and shade state complete");
+#endif
 
     glEnable(GL_FOG);
     glFogi(GL_FOG_MODE, GL_LINEAR);
     glFogf(GL_FOG_DENSITY, 0.25);
     glHint(GL_FOG_HINT, GL_NICEST);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: fog state complete");
+#endif
 
     glEnable(GL_LINE_SMOOTH);
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: line state complete");
+#endif
 
     glCullFace(GL_FRONT);
     glEnable(GL_CULL_FACE);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: cull state complete");
+    iosstartup_log("gl_init: inittmus begin");
+#endif
     inittmus();
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: inittmus complete");
+    iosstartup_log("gl_init: resetcamera begin");
+#endif
     resetcamera();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: resetcamera complete");
+#endif
 }
 
 FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
