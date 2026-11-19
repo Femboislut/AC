@@ -61,7 +61,7 @@ fn extract(input: &Path, output: &Path) -> Result<(), String> {
     Ok(())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ac_nsis_extract(
     input_path: *const c_char,
     output_path: *const c_char,
