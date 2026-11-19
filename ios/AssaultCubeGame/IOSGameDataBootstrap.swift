@@ -86,7 +86,7 @@ private final class ACGameDataBootstrapController: UIViewController, UIDocumentP
                     guard let self else { return }
                     self.spinner.stopAnimating()
                     self.importing = false
-                    guard let status, status.isValid else {
+                    guard status.isValid else {
                         self.importButton.isEnabled = true
                         self.detailLabel.text = "The selected files did not contain a complete AssaultCube installation. Please choose the original installer or the correct game-data folder."
                         return
