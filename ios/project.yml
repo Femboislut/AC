@@ -47,6 +47,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         HEADER_SEARCH_PATHS:
           - "$(SRCROOT)/../build/package/SDL2/include"
+          - "$(SRCROOT)/../build/package/SDL2/include/SDL2"
           - "$(SRCROOT)/../build/package/GL4ES/include"
         OTHER_LDFLAGS:
           - "$(inherited)"
