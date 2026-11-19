@@ -239,6 +239,13 @@ jobs:
           test -f build/package/Engine/lib/libAC_ENET.a
           test -f build/package/Audio/lib/libvorbisenc.a
           tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
+      - name: Upload combined dependency artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-ARM64-dependencies
+          path: AssaultCube-iOS-ARM64-dependencies.tar.gz
+          if-no-files-found: error
+          retention-days: 14
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
@@ -279,11 +286,4 @@ jobs:
           name: AssaultCube-iOS-engine-diagnostics
           path: build/logs/*.log
           if-no-files-found: ignore
-          retention-days: 14
-      - name: Upload combined dependency artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: AssaultCube-iOS-ARM64-dependencies
-          path: AssaultCube-iOS-ARM64-dependencies.tar.gz
-          if-no-files-found: error
           retention-days: 14
