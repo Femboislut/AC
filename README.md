@@ -1,52 +1,42 @@
-## What is AssaultCube?
-AssaultCube is a **FREE**, multiplayer, first-person shooter game, based on the
-[CUBE engine](http://cubeengine.com/cube.php).
+# AssaultCube iOS Port (Experimental)
 
-Taking place in realistic environments, with fast, arcade gameplay,
-it's addictive and fun!
+An independent iOS porting effort for [AssaultCube](https://assault.cubers.net/), based on the upstream [AssaultCube source repository](https://github.com/assaultcube/AC).
 
-With efficient bandwidth usage, it's low-latency and can even run over a 56 Kbps
-connection. It's tiny too, weighing in at a lightweight about 50 MB package
-available for [Windows, Linux, Mac](https://assault.cubers.net/download.html).
-On the correct settings, it can even run on old hardware (Pentium III and above).
+> **Status: experimental / not yet confirmed playable.** This repository has verified game-data import on an iPhone and builds native iOS dependencies and engine code in CI. The current game-app target is still being brought up; no gameplay, gyro, touch layout, audio, or multiplayer feature is claimed verified on-device yet.
 
-![screenshot](https://user-images.githubusercontent.com/7680684/69888836-9a931d80-12b3-11ea-8123-bbf06908a96f.jpg)
+## Project goals
 
-## Features in a nutshell:
+- Native ARM64 iOS game runtime using SDL2 and GL4ES.
+- Import game data from the official Windows installer without executing Windows binaries.
+- Touch controls designed for phones, with editable layouts and multitouch.
+- Optional gyroscope aiming, including calibration, sensitivity, and independent axis inversion.
+- Bluetooth game-controller support and configurable bindings.
+- Accessible in-game settings for graphics, controls, audio, HUD, and gameplay.
+- Multiplayer server browser, favourites, direct-connect and reconnect UX where supported by the engine.
 
- * It's **FREE**.
- * Source code is available under a zlib-like open source license.
- * Low latency, it can even run across a 56 Kbps connection!
- * Lightweight size, only about 50 MB to download, plus additional maps
- average 20 KB each!
- * With the correct settings, it can run on old hardware
- (Pentium III and above).
- * Officially runs on most major systems (Windows: 2000/XP/Vista/7/8/10/11, Linux,
- macOS: 10.6+ 64-bit), and maybe even some
- [non-major ones](https://assault.cubers.net/docs/getstarted.html)?
- * Has a built in, in-game map editor to help players create their own maps and
- allows for co-operative editmode in realtime with others!
- * Features a single-player bot system.
- * Supports recording of your game by the "demo" system.
- * Contains many multiplayer game modes, including: Deathmatch, Survivor,
- Capture the Flag, Hunt the Flag, Keep the Flag, Pistol Frenzy, Last Swiss
- Standing & One-Shot One-Kill (plus team versions of these modes).
- * Comes pre-packaged with several dozen different maps!
+These are project goals; features become “implemented” only after build and device testing.
 
-## More info:
+## Current verified milestone
 
-Most of this README was directly copied from the
-[AssaultCube Homepage](https://assault.cubers.net), which should have everything
-you need in relation to AssaultCube.
+- **Game-data importer tested on iPhone:** validates 1,829 files (~49 MB) imported from the Windows installer.
+- **Native dependency CI:** SDL2, GL4ES, Ogg/Vorbis, ENet and engine source have been built as ARM64 libraries in earlier successful runs.
+- **Current game IPA build:** in active development. The last build failed at the app link step because SDL Bluetooth HID symbols were missing the CoreBluetooth framework. The link configuration has been corrected; the follow-up build is pending.
 
-## Contributing:
+See [iOS development status and build notes](ios/README.md).
 
-Learn [how to become a contributor and submit your own code](CONTRIBUTING.md)
+## Testing builds
 
-## Redistribution:
+Open [GitHub Actions](https://github.com/TangiDev69/AC/actions), select the **iOS ARM64 dependency build** workflow, and open a successful run's artifacts. Artifacts are CI test builds, not official releases, until a tested IPA is published under [Releases](https://github.com/TangiDev69/AC/releases).
 
-You may redistribute AssaultCube in any way the license permits, such as the
-free unmodified distribution of AssaultCube's source and binaries. If you have
-any doubts, you can look at the
-[license](https://assault.cubers.net/docs/license.html).
+## Importing game data on iPhone
 
+1. Keep the official AssaultCube Windows installer `.exe` in Files.
+2. Long-press it and choose **Share**.
+3. Share to the AssaultCube importer (or share to LiveContainer, then open the importer there).
+4. Complete the import and confirm that it reports valid game data.
+
+The importer extracts game assets only; it does not run the Windows installer or Windows executable code.
+
+## Upstream project and licensing
+
+AssaultCube is an upstream project. This repository is an independent iOS porting fork, not an official release. Preserve upstream notices and licenses; review the applicable upstream license before redistributing binaries or game data.
