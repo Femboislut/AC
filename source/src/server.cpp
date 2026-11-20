@@ -3174,9 +3174,16 @@ void polldeferredprocessing()
                             }
                             else
                             {
-                                IOS_DEFERRED_TRACE("deferred: before unauthenticated continuation send");
-                                sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
-                                IOS_DEFERRED_TRACE("deferred: unauthenticated continuation send returned");
+                                IOS_DEFERRED_TRACE("deferred: before unauthenticated continuation packet construction");
+                                packetbuf continuation(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+                                IOS_DEFERRED_TRACE("deferred: continuation packet buffer allocated");
+                                putint(continuation, SV_SERVINFO_CONTD);
+                                putint(continuation, 0);
+                                IOS_DEFERRED_TRACE("deferred: continuation packet fields encoded");
+                                ENetPacket *continuationpacket = continuation.finalize();
+                                IOS_DEFERRED_TRACE("deferred: continuation packet finalized");
+                                sendpacket(sa->cn, 1, continuationpacket);
+                                IOS_DEFERRED_TRACE("deferred: continuation sendpacket returned");
                             }
                         }
                     }
