@@ -1317,7 +1317,11 @@ int progress_callback_retrieveservers(void *data, float progress)
     return interceptkey(SDLK_ESCAPE) ? 1 : 0;
 }
 
+#if defined(AC_PLATFORM_IOS)
+VARP(mastertype, 0, 1, 1); // iOS uses the HTTP master-list endpoint
+#else
 VARP(mastertype, 0, 0, 1); // 0: TCP direct, 1: HTTP proxy
+#endif
 
 void retrieveservers(vector<char> &data)
 {
