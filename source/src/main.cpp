@@ -737,11 +737,7 @@ void resetgl()
     uniformtexres = !hirestextures;
     c2skeepalive();
 
-#if defined(AC_PLATFORM_IOS)
     int useddepthbits = 0, usedfsaa = 0;
-#else
-    int useddepthbits = 0, usedfsaa = 0;
-#endif
     iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
     iosstartup_log("startup: setupscreen done");
