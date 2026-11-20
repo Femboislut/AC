@@ -18,6 +18,7 @@ private final class ACKeyboardOverlayView: UIView {
     private let joystick = UIView()
     private let joystickKnob = UIView()
     private var controlButtons: [UIButton] = []
+    private var menuButtons: [UIButton] = []
     private var xPercent: CGFloat = 92
     private var yPercent: CGFloat = 7
     private var buttonSize: CGFloat = 48
@@ -74,6 +75,12 @@ private final class ACKeyboardOverlayView: UIView {
         addKeyButton("PREV", key: 113, size: 48)
         addKeyButton("PRI", key: 49, size: 46)
         addKeyButton("SEC", key: 50, size: 46)
+        addMenuButton("◀", key: 0x40000050)
+        addMenuButton("▲", key: 0x40000052)
+        addMenuButton("▼", key: 0x40000051)
+        addMenuButton("▶", key: 0x4000004F)
+        addMenuButton("OK", key: 13)
+        addMenuButton("BACK", key: 27)
         refreshTitle()
     }
 
@@ -104,6 +111,20 @@ private final class ACKeyboardOverlayView: UIView {
         controlButtons.append(control)
     }
 
+    private func addMenuButton(_ title: String, key: Int) {
+        let control = UIButton(type: .system)
+        style(control, titleSize: 13)
+        control.setTitle(title, for: .normal)
+        control.tag = key
+        control.addTarget(self, action: #selector(controlDown(_:)), for: .touchDown)
+        for event: UIControl.Event in [.touchUpInside, .touchUpOutside, .touchCancel] {
+            control.addTarget(self, action: #selector(controlUp(_:)), for: event)
+        }
+        control.isHidden = false
+        addSubview(control)
+        menuButtons.append(control)
+    }
+
     func configure(keyboardEnabled: Bool, x: CGFloat, y: CGFloat, size: CGFloat, visible: Bool, menuMode: Bool, hudEnabled: Bool, hudScale: CGFloat) {
         xPercent = min(max(x, 0), 100)
         yPercent = min(max(y, 0), 100)
@@ -121,6 +142,7 @@ private final class ACKeyboardOverlayView: UIView {
         menuMode = enabled
         joystick.isHidden = enabled || !hudEnabled
         controlButtons.forEach { $0.isHidden = enabled || !hudEnabled }
+        menuButtons.forEach { $0.isHidden = !enabled }
         if enabled { releaseAllDirections() }
         refreshGyroscope()
         refreshTitle()
@@ -163,11 +185,21 @@ private final class ACKeyboardOverlayView: UIView {
         previous.frame = CGRect(x: bounds.width - 232 * scale, y: bounds.height - 76 * scale, width: 50 * scale, height: 50 * scale)
         primary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 142 * scale, width: 46 * scale, height: 46 * scale)
         secondary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 82 * scale, width: 46 * scale, height: 46 * scale)
+
+        let menuSize: CGFloat = 50
+        let menuGap: CGFloat = 7
+        let menuTotal = CGFloat(menuButtons.count) * menuSize + CGFloat(max(menuButtons.count - 1, 0)) * menuGap
+        let menuStart = max(8, (bounds.width - menuTotal) / 2)
+        for (index, control) in menuButtons.enumerated() {
+            control.frame = CGRect(x: menuStart + CGFloat(index) * (menuSize + menuGap),
+                                   y: max(8, bounds.height - menuSize - 12),
+                                   width: menuSize, height: menuSize)
+        }
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard isUserInteractionEnabled, !isHidden, alpha > 0.01 else { return nil }
-        let candidates: [UIView] = [button, modeButton, joystick] + controlButtons.reversed().map { $0 as UIView }
+        let candidates: [UIView] = [button, modeButton, joystick] + controlButtons.reversed().map { $0 as UIView } + menuButtons.reversed().map { $0 as UIView }
         for view in candidates where !view.isHidden {
             let local = view.convert(point, from: self)
             if view.bounds.contains(local) {
