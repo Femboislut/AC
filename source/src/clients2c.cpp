@@ -259,12 +259,14 @@ int srvgamesalt;
 
 void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
 {
+    mlog(ACLOG_INFO, "client: parsemessages entered cn=%d remaining=%d", cn, p.remaining());
     static char text[MAXTRANS];
     int type, joining = 0;
 
     while(p.remaining())
     {
         type = getint(p);
+        mlog(ACLOG_INFO, "client: received message type=%d remaining=%d", type, p.remaining());
 
         #ifdef _DEBUG
         if(type!=SV_POS && type!=SV_CLIENTPING && type!=SV_PING && type!=SV_PONG && type!=SV_CLIENT)
@@ -360,9 +362,11 @@ void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
 
             case SV_SERVINFO_CONTD:  // 2nd welcome message from the server
             {
+                mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD handler entered");
                 session_s *s = &session;
                 string tmp, servauth;
                 int auth = getint(p);
+                mlog(ACLOG_INFO, "client: continuation auth=%d", auth);
                 if(auth)
                 {
                     formatstring(servauth)("SERVINFOSIGNED<%s>", bin2hex(tmp, (uchar*)s->clientsignature, 64));
