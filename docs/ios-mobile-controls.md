@@ -4,17 +4,18 @@
 
 The iOS overlay is an adapter to AssaultCube's existing SDL input path. It does not replace the game controls or create a separate gameplay simulation.
 
-- **Menu mode** is the startup mode. It releases relative mouse capture, leaves the pointer visible where supported, and lets mouse/touch clicks reach the existing AssaultCube menus.
+- **Menu mode** is the startup mode. It releases relative mouse capture, leaves the pointer visible where supported, and lets mouse/touch clicks reach the existing AssaultCube menus. A native on-screen navigation pad provides left/right, up/down, OK and Back because the original menu system navigates the highlighted row rather than hit-testing finger coordinates.
 - **Aim mode** captures relative mouse movement for camera look and displays the touch HUD.
 - The left virtual stick emits the existing `W/A/S/D` key bindings.
 - FIRE emits the normal left-mouse button event.
 - JUMP, CROUCH, RELOAD, NADE, PREV, PRI and SEC emit the existing Space, Left Shift, R, G, Q, 1 and 2 key bindings.
 - The UIKit controls only consume touches inside their own hit regions. Touches elsewhere continue to the SDL game view for camera movement.
 - Gyroscope aiming is optional and disabled by default. It sends relative-look input through the same SDL mouse-motion path.
+- The original Settings menu includes an iOS Touch Controls page for HUD visibility/scale, gyro enable/sensitivity, and keyboard-button visibility/position/size.
 
-## Console settings
+## In-game settings
 
-These iOS variables are persistent AssaultCube config variables:
+The iOS Touch Controls page in AssaultCube's original Settings menu edits these persistent config variables:
 
 | Variable | Default | Purpose |
 |---|---:|---|
@@ -27,17 +28,7 @@ These iOS variables are persistent AssaultCube config variables:
 | `ioskeyboardy` | 7 | Keyboard button vertical position, percent |
 | `ioskeyboardsize` | 48 | Keyboard button size, range 32–80 |
 
-Examples:
-
-```
-ioshud 0
-ioshud 1
-ioshudscale 85
-iosgyro 1
-iosgyrosensitivity 120
-```
-
-The existing AssaultCube configuration system saves these variables. The original Settings, Keyboard, Mouse, HUD, Gameplay, Video, Sound, Multiplayer and Singleplayer menus remain the game's own menus; they are not replaced by the iOS overlay.
+The same variables can also be changed from the engine console. The existing AssaultCube configuration system saves them. The original Settings, Keyboard, Mouse, HUD, Gameplay, Video, Sound, Multiplayer and Singleplayer menus remain the game's own menus; they are not replaced by the iOS overlay.
 
 ## Validation status and limitations
 
