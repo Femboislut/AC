@@ -3,6 +3,13 @@
 #include "cube.h"
 #include "bot/bot.h"
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#define IOS_CLIENT_TRACE(message) iosstartup_log(message)
+#else
+#define IOS_CLIENT_TRACE(message) do { } while(0)
+#endif
+
 VARP(networkdebug, 0, 0, 1);
 #define DEBUGCOND (networkdebug==1)
 
@@ -259,6 +266,7 @@ int srvgamesalt;
 
 void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
 {
+    IOS_CLIENT_TRACE("client-path: parsemessages entered");
     mlog(ACLOG_INFO, "client: parsemessages entered cn=%d remaining=%d", cn, p.remaining());
     static char text[MAXTRANS];
     int type, joining = 0;
@@ -266,6 +274,7 @@ void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
     while(p.remaining())
     {
         type = getint(p);
+        IOS_CLIENT_TRACE("client-path: message type decoded");
         mlog(ACLOG_INFO, "client: received message type=%d remaining=%d", type, p.remaining());
 
         #ifdef _DEBUG
@@ -362,10 +371,12 @@ void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
 
             case SV_SERVINFO_CONTD:  // 2nd welcome message from the server
             {
+                IOS_CLIENT_TRACE("client-path: SV_SERVINFO_CONTD entered");
                 mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD handler entered");
                 session_s *s = &session;
                 string tmp, servauth;
                 int auth = getint(p);
+                IOS_CLIENT_TRACE("client-path: continuation auth field decoded");
                 mlog(ACLOG_INFO, "client: continuation auth=%d", auth);
                 if(auth)
                 {
@@ -391,9 +402,12 @@ void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
                     if(!ed25519_sign_check((uchar*)servauth, auth + 64, s->serverpubkey)) conoutf("\f3server authentication failed");
                     else clientlogf("server authenticated as %s", bin2hex(tmp, s->serverpubkey, 32));
                 }
+                IOS_CLIENT_TRACE("client-path: continuation fields processed");
                 player1->clientnum = s->cn;
                 mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD before sendintro; clientnum=%d player1=%p", s->cn, (void *)player1);
+                IOS_CLIENT_TRACE("client-path: before sendintro");
                 sendintro();
+                IOS_CLIENT_TRACE("client-path: sendintro returned");
                 mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD sendintro returned");
                 break;
             }
@@ -1476,6 +1490,7 @@ void receivefile(uchar *data, int len)
 
 void servertoclient(int chan, uchar *buf, int len, bool demo)   // processes any updates from the server
 {
+    IOS_CLIENT_TRACE("client-path: servertoclient entered");
     ucharbuf p(buf, len);
     switch(chan)
     {
@@ -1487,6 +1502,7 @@ void servertoclient(int chan, uchar *buf, int len, bool demo)   // processes any
 
 void localservertoclient(int chan, uchar *buf, int len, bool demo)   // processes any updates from the server
 {
+    IOS_CLIENT_TRACE("client-path: localservertoclient entered");
 //    pktlogger.queue(enet_packet_create (buf, len, 0));  // log local & demo packets
     servertoclient(chan, buf, len, demo);
 }
