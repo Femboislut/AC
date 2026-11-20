@@ -3107,12 +3107,6 @@ int deferredprocessingthread(void *nop)
 
 void polldeferredprocessing()
 {
-#if defined(AC_PLATFORM_IOS)
-    extern void iosstartup_log(const char *message);
-    static int ios_deferred_trace_count = 0;
-    bool ios_deferred_trace = ios_deferred_trace_count++ < 8;
-#else
-#endif
     static void *deferredprocessingthread_ti = NULL;
     if(!deferredprocessingthread_ti)
     {
@@ -3123,13 +3117,7 @@ void polldeferredprocessing()
     {
         servinfoauth *sa = (servinfoauth *)servinfoauth_dropbox;
         servinfoauth_done = false;
-        if(!sa)
-        {
-        }
-        else if(sa->cn < 0 || !clients.inrange(sa->cn) || !clients[sa->cn])
-        {
-        }
-        else
+        if(sa && sa->cn >= 0 && clients.inrange(sa->cn) && clients[sa->cn])
         {
             switch(sa->type)
             {
@@ -3185,7 +3173,7 @@ void polldeferredprocessing()
         servinfoauth_dropbox = NULL;
     }
     if(!servinfoauths.empty() && servinfoauth_deferred.getvalue() < 1) servinfoauth_deferred.post();
-#undef IOS_DEFERRED_TRACE
+
 }
 
 // server side processing of updates: does very little and most state is tracked client only
@@ -4585,12 +4573,6 @@ SERVPARLIST(mandatory_auth, 0, 1, 0, endis, "sEnforce IDs for all clients even o
 
 void serverslice(uint timeout)   // main server update, called from cube main loop in sp, or dedicated server loop
 {
-#if defined(AC_PLATFORM_IOS)
-    extern void iosstartup_log(const char *message);
-    static int ios_server_trace_count = 0;
-    bool ios_server_trace = ios_server_trace_count++ < 8;
-#else
-#endif
     static int msend = 0, mrec = 0, csend = 0, crec = 0, mnum = 0, cnum = 0;
 #ifdef STANDALONE
     int nextmillis = (int)enet_time_get();
@@ -4762,7 +4744,7 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         }
     }
     sendworldstate();
-#undef IOS_SERVER_TRACE
+
 }
 
 void cleanupserver()
