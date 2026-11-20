@@ -294,6 +294,11 @@ jobs:
           APP_PATH="build/ios-game/Build/Products/Release-iphoneos/AssaultCube.app"
           test -d "$APP_PATH"
           test -f "$APP_PATH/Info.plist"
+          # XcodeGen can preserve the source folder hierarchy for file resources.
+          # The engine resolves this config from the app bundle root, so stage
+          # the authoritative iOS menu there explicitly before IPA packaging.
+          install -m 0644 ios/AssaultCubeApp/MobileConfig/menus_settings.cfg "$APP_PATH/menus_settings.cfg"
+          test -s "$APP_PATH/menus_settings.cfg"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
           # XcodeGen/Xcode may omit this display-name key when processing a
           # hand-authored Info.plist. Normalize the built bundle before IPA
