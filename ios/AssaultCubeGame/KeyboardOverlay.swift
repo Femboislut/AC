@@ -85,7 +85,7 @@ private enum ACKeyboardOverlay {
                 return
             }
 
-            guard enabled && inputActive else {
+            guard enabled else {
                 overlay?.removeFromSuperview()
                 overlay = nil
                 return
