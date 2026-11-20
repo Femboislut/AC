@@ -6,6 +6,7 @@
 #endif
 
 // The Settings menu uses this flag to expose the iOS-only mobile controls page.
+// CI also inspects the IPA to ensure the patched menu resource is really bundled.
 #if defined(AC_PLATFORM_IOS)
 VAR(iosplatform, 0, 1, 1);
 extern "C" int ac_ios_ensure_game_data(void);
