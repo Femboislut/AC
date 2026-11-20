@@ -1197,6 +1197,11 @@ void checkinput()
 
             case SDL_MOUSEBUTTONDOWN:
 #if defined(AC_PLATFORM_IOS)
+                // SDL also reports finger taps as synthetic mouse buttons. Keep
+                // touch-derived mouse motion for aiming, but never treat a raw
+                // screen tap/swipe as the FIRE action. The HUD FIRE button sends
+                // its own event, whose 'which' is not SDL_TOUCH_MOUSEID.
+                if(event.button.which == SDL_TOUCH_MOUSEID) break;
                 if(!grabinput && !iosmenumode) // click-to-grab only in explicit Aim mode
 #else
                 if(!grabinput) // click-to-grab
@@ -1220,6 +1225,9 @@ void checkinput()
                 }
 
             case SDL_MOUSEBUTTONUP:
+#if defined(AC_PLATFORM_IOS)
+                if(event.button.which == SDL_TOUCH_MOUSEID) break;
+#endif
                 EVENTDEBUG(concatformatstring(eb, "(SDL_MOUSEBUTTON%s) button %d, state %d, clicks %d, x %d, y %d", event.type == SDL_MOUSEBUTTONUP ? "UP" : "DOWN", event.button.button, event.button.state, event.button.clicks, event.button.x, event.button.y));
                 if(lasttype==event.type && lastbut==event.button.button) break;
                 keypress(-(event.button.button > 3 ? (event.button.button + 4) : event.button.button), 0, event.button.state != SDL_RELEASED);
@@ -1622,9 +1630,6 @@ int main(int argc, char **argv)
 #ifdef _DEBUG
     par = SDL_INIT_NOPARACHUTE;
 #endif
-    // SDL otherwise synthesizes mouse clicks from every raw screen touch.
-    // That made camera swipes fire the weapon even when FIRE was untouched.
-    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     iosstartup_log("startup: SDL_Init requested");
     if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|par)<0) fatal("Unable to initialize SDL");
     iosstartup_log("startup: SDL_Init succeeded");
