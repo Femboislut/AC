@@ -12,6 +12,7 @@ VAR(iosplatform, 0, 1, 1);
 extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 static bool iosmenumode = true;
+static bool ioslastmenuvisible = true;
 extern "C" void ac_ios_input_mode_update(int menuMode);
 extern "C" void ac_ios_touch_hud_update(int enabled, float scale);
 extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity);
@@ -1825,6 +1826,19 @@ int main(int argc, char **argv)
 
         checkinput();
 #if defined(AC_PLATFORM_IOS)
+        // Keep the UIKit controls synchronized with AssaultCube's real menu
+        // state. Menu navigation appears while a menu is open; the FPS HUD
+        // appears automatically as soon as the game returns to play.
+        {
+            const bool menu_now = menuvisible();
+            if(menu_now != ioslastmenuvisible)
+            {
+                ioslastmenuvisible = menu_now;
+                iosmenumode = menu_now;
+                inputgrab(grabinput = !iosmenumode);
+                ioskeyboardoverlayupdate();
+            }
+        }
         if(frames < 8) iosstartup_log("frame: input processing complete");
 #endif
 
