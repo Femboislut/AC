@@ -544,8 +544,16 @@ bool needsautoscreenshot = false;
 
 void updatescreensize()
 {
+#if defined(AC_PLATFORM_IOS)
+    // SDL window dimensions are UIKit points. Render against the drawable's
+    // actual pixel dimensions so Retina devices use their native framebuffer.
+    SDL_GL_GetDrawableSize(screen, &screenw, &screenh);
+    if(screenw < 1 || screenh < 1) SDL_GetWindowSize(screen, &screenw, &screenh);
+#else
     SDL_GetWindowSize(screen, &screenw, &screenh);
+#endif
     if(screenh < 1) screenh = 1;
+    if(screenw < 1) screenw = 1;
     VIRTW = screenw * VIRTH / screenh;
     glViewport(0, 0, screenw, screenh);
 }
@@ -560,8 +568,14 @@ void screenres(int w, int h)
         scr_w = min(scr_w, desktopw);
         scr_h = min(scr_h, desktoph);
     }
+#if defined(AC_PLATFORM_IOS)
+    // iOS owns the drawable size; the requested desktop resolution must not
+    // resize the UIKit surface. updatescreensize() reads native drawable pixels.
+    (void)fullscreendesktop;
+#else
     if(!(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN)) SDL_SetWindowSize(screen, scr_w, scr_h);
     else if(!fullscreendesktop) initwarning("screen resolution");
+#endif
 }
 #if defined(WIN32) || defined(__APPLE__) || !defined(WIN32)
 void setresdata(char *s, enet_uint32 c)
