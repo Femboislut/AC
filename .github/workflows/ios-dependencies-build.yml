@@ -270,24 +270,52 @@ jobs:
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml
-      - name: Build and verify SDL2 / GL4ES smoke-test target
+      - name: Cache Xcode Swift package checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/ios-game/SourcePackages
+          key: ios-spm-${{ runner.os }}-xcode26-${{ hashFiles('ios/project.yml', 'ios/AssaultCubeData/Package.swift') }}
+          restore-keys: |
+            ios-spm-${{ runner.os }}-xcode26-
+
+      - name: Build native AssaultCube game app
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           mkdir -p build/logs
           xcodebuild \
             -project ios/AssaultCube.xcodeproj \
-            -scheme AssaultCubeSDLTest \
+            -scheme AssaultCubeGame \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -derivedDataPath "$PWD/build/ios-smoke" \
+            -derivedDataPath "$PWD/build/ios-game" \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee build/logs/sdl-smoke-build.log
-          APP_PATH="build/ios-smoke/Build/Products/Release-iphoneos/AssaultCubeSDLTest.app"
+            build 2>&1 | tee build/logs/game-build.log
+          APP_PATH="build/ios-game/Build/Products/Release-iphoneos/AssaultCube.app"
           test -d "$APP_PATH"
           test -f "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
-          echo "SDL2 / GL4ES smoke-test target compiled; no separate IPA is published."
-
+          # XcodeGen/Xcode may omit this display-name key when processing a
+          # hand-authored Info.plist. Normalize the built bundle before IPA
+          # packaging so the installed app has a stable SpringBoard name.
+          python3 - "$APP_PATH/Info.plist" <<'PY'
+          import plistlib, sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          with path.open("rb") as stream:
+              info = plistlib.load(stream)
+          if info.get("CFBundleIdentifier") != "net.cubers.assaultcube.ios":
+              raise SystemExit("Unexpected app bundle identifier")
+          info["CFBundleDisplayName"] = "AssaultCube"
+          info["CFBundleName"] = "AssaultCube"
+          with path.open("wb") as stream:
+              plistlib.dump(info, stream, fmt=plistlib.FMT_XML, sort_keys=False)
+          PY
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          mkdir -p build/ios-game-ipa/Payload
+          ditto "$APP_PATH" build/ios-game-ipa/Payload/AssaultCube.app
+          (cd build/ios-game-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-iOS-Game.ipa")
+          unzip -l AssaultCube-iOS-Game.ipa | grep -E "Payload/AssaultCube.app/Info.plist$"
       - name: Build native AssaultCube game app
         run: |
           set -euo pipefail
