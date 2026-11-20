@@ -677,10 +677,14 @@ savedscore *findscore(client &c, bool insert)
 
 void sendf(int cn, int chan, const char *format, ...)
 {
+    bool tracecontinuation = format && !strcmp(format, "rii");
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: continuation entered cn=%d chan=%d", cn, chan);
     int exclude = -1;
     bool reliable = false;
     if(*format=='r') { reliable = true; ++format; }
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before packetbuf allocation");
     packetbuf p(MAXTRANS, reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: packetbuf allocated");
     va_list args;
     va_start(args, format);
     while(*format) switch(*format++)
@@ -705,7 +709,13 @@ void sendf(int cn, int chan, const char *format, ...)
         case 'i': // one to nine integer arguments
         {
             int n = isdigit(*format) ? *format++-'0' : 1;
-            loopi(n) putint(p, va_arg(args, int));
+            loopi(n)
+            {
+                int value = va_arg(args, int);
+                if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before putint value=%d", value);
+                putint(p, value);
+                if(tracecontinuation) mlog(ACLOG_INFO, "sendf: putint returned");
+            }
             break;
         }
 
@@ -736,7 +746,12 @@ void sendf(int cn, int chan, const char *format, ...)
         }
     }
     va_end(args);
-    sendpacket(cn, chan, p.finalize(), exclude);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before finalize");
+    ENetPacket *outpacket = p.finalize();
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: finalize returned packet=%p", (void *)outpacket);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before sendpacket");
+    sendpacket(cn, chan, outpacket, exclude);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: sendpacket returned");
 }
 
 void sendservmsg(const char *msg, int cn = -1)
