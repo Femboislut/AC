@@ -67,7 +67,11 @@ void gl_checkextensions()
         glClientActiveTexture_ = (PFNGLCLIENTACTIVETEXTUREARBPROC)getprocaddress("glClientActiveTextureARB");
         glMultiTexCoord2f_     = (PFNGLMULTITEXCOORD2FARBPROC)    getprocaddress("glMultiTexCoord2fARB");
         glMultiTexCoord3f_     = (PFNGLMULTITEXCOORD3FARBPROC)    getprocaddress("glMultiTexCoord3fARB");
-        hasMT = true;
+        hasMT = glActiveTexture_ && glClientActiveTexture_ && glMultiTexCoord2f_ && glMultiTexCoord3f_;
+#if defined(AC_PLATFORM_IOS)
+        extern void iosstartup_log(const char *message);
+        iosstartup_log(hasMT ? "OpenGL: multitexture entry points resolved" : "OpenGL: multitexture extension present but required entry points are missing; disabling multitexture");
+#endif
     }
 
     if(hasext(exts, "GL_EXT_multi_draw_arrays"))
@@ -1170,10 +1174,23 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     effective_stencilshadow = mapoverride_nostencilshadows && !ignoreoverride_nostencilshadows ? 0 : stencilshadow;
     bool effective_waterreflect = waterreflect && !editmode && (!mapoverride_nowaterreflect || ignoreoverride_nowaterreflect);
 
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    iosstartup_log("frame: gl_drawframe entered");
+#endif
     dodynlights();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: dynamic lights complete");
+#endif
     drawminimap(w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: minimap complete");
+#endif
 
     recomputecamera();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: camera recomputed");
+#endif
 
     aspect = float(w)/h;
     fovy = 2*atan2(tan(float(dynfov())/2*RAD), aspect)/RAD;
