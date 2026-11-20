@@ -75,6 +75,7 @@ targets:
     resources:
       - path: NSISExtractor/LICENSE
       - path: NSISExtractor/NOTICE
+      - path: AssaultCubeApp/MobileConfig/menus_settings.cfg
     dependencies:
       - package: AssaultCubeData
     info:
