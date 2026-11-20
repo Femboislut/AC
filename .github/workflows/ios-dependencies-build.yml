@@ -326,6 +326,8 @@ jobs:
           test -s "$APP_PATH/Assets.car"
           test -s "AssaultCube-iOS-Game.ipa"
           unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/Assets.car"
+          unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/menus_settings.cfg"
+          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/menus_settings.cfg | grep -F "iOS Touch Controls"
           unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/Info.plist > build/game-Info.plist
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/game-Info.plist | grep -Fx "net.cubers.assaultcube.ios"
           /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" build/game-Info.plist | grep -Fx "AssaultCube"
