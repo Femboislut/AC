@@ -9,27 +9,16 @@
 extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 
-// Persist early startup breadcrumbs to Documents so a crash before clientlog
-// initialization can still be diagnosed on-device through Files sharing.
-void iosstartup_log(const char *message)
+// Startup diagnostics are disabled for iOS builds. Previous builds wrote an
+// unbounded Documents log at diagnostic checkpoints.
+static void iosstartup_log(const char *) {}
+static void clear_iosstartup_log()
 {
     const char *home = getenv("HOME");
-    if(home && *home)
-    {
-        static char path[4096];
-        if(snprintf(path, sizeof(path), "%s/Documents/AssaultCubeStartup.log", home) > 0)
-        {
-            FILE *log = fopen(path, "a");
-            if(log)
-            {
-                fprintf(log, "%s\n", message ? message : "(null)");
-                fflush(log);
-                fclose(log);
-            }
-        }
-    }
-    fprintf(stderr, "[AC-iOS] %s\n", message ? message : "(null)");
-    fflush(stderr);
+    if(!home || !*home) return;
+    char path[4096];
+    if(snprintf(path, sizeof(path), "%s/Documents/AssaultCubeStartup.log", home) > 0)
+        remove(path);
 }
 #else
 static void iosstartup_log(const char *) {}
@@ -813,6 +802,35 @@ void fpsrange(int *low, int *high)
 
 COMMAND(fpsrange, "ii");
 
+#if defined(AC_PLATFORM_IOS)
+extern "C" void ac_ios_keyboard_overlay_update(int enabled, int inputActive, int keyboardVisible, float xPercent, float yPercent, float size);
+extern "C" void ac_ios_toggle_keyboard();
+static bool ioskeyboardvisible = false;
+static void ioskeyboardoverlayupdate()
+{
+    ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
+                                  (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
+}
+VARFP(ioskeyboardbutton, 0, 1, 1, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardx, 0, 92, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardy, 0, 7, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardsize, 32, 48, 80, ioskeyboardoverlayupdate());
+extern "C" void ac_ios_toggle_keyboard()
+{
+    if(!textinputmask)
+    {
+        extern void saycommand(char *);
+        saycommand("");
+        return;
+    }
+    if(ioskeyboardvisible) { SDL_StopTextInput(); ioskeyboardvisible = false; }
+    else { SDL_StartTextInput(); ioskeyboardvisible = true; }
+    ioskeyboardoverlayupdate();
+}
+#else
+static void ioskeyboardoverlayupdate() {}
+#endif
+
 int keyrepeatmask = 0, textinputmask = 0; // bunches of flags for the same functions
 Uint32 textinputtime = 0;
 
@@ -829,6 +847,10 @@ void textinput(bool on, int mask)
         if(!textinputmask)
         {
             SDL_StartTextInput();
+#if defined(AC_PLATFORM_IOS)
+            ioskeyboardvisible = true;
+            ioskeyboardoverlayupdate();
+#endif
             textinputtime = SDL_GetTicks();
         }
         textinputmask |= mask;
@@ -836,7 +858,14 @@ void textinput(bool on, int mask)
     else
     {
         textinputmask &= ~mask;
-        if(!textinputmask) SDL_StopTextInput();
+        if(!textinputmask)
+        {
+            SDL_StopTextInput();
+#if defined(AC_PLATFORM_IOS)
+            ioskeyboardvisible = false;
+            ioskeyboardoverlayupdate();
+#endif
+        }
     }
 }
 
@@ -1293,6 +1322,7 @@ void sanitychecks()
 int main(int argc, char **argv)
 {
 #if defined(AC_PLATFORM_IOS)
+    clear_iosstartup_log();
     iosstartup_log("START: engine main() entered");
     // Import/validate assets before any engine configuration or texture loading.
     // This runs inside SDL's existing UIKit lifecycle and does not create a second app entry point.
