@@ -843,7 +843,11 @@ COMMAND(clearminimap, "");
 VARFP(minimapres, 7, 9, 10, clearminimap());
 void drawminimap(int w, int h)
 {
-    if(!minimapdirty) return;
+    // The engine starts with an empty placeholder world before the imported
+    // map is installed. Rendering the minimap against that incomplete world
+    // can enter world-rendering code before its map structures are ready.
+    // Keep it dirty so it is generated normally once a real map is loaded.
+    if(!maploaded || !minimapdirty) return;
     int size = 1<<minimapres, sizelimit = min(hwtexsize, min(w, h));
     while(size > sizelimit) size /= 2;
     if(size!=minimaplastsize && minimaptex)
