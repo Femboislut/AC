@@ -733,6 +733,9 @@ void drawreflection(float hf, int w, int h, float changelod, bool refract)
     glMatrixMode(GL_MODELVIEW);
 
     renderstripssky();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: sky strips complete");
+#endif
 
     glPushMatrix();
     glLoadIdentity();
@@ -752,6 +755,9 @@ void drawreflection(float hf, int w, int h, float changelod, bool refract)
     setuptmu(0, "T * P x 2");
 
     renderstrips();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: world strips complete");
+#endif
     rendermapmodels();
     renderentities();
     renderclients();
@@ -1223,6 +1229,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
 
     transplayer();
     readmatrices();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: matrices loaded");
+#endif
 
     if(!underwater && effective_waterreflect)
     {
@@ -1232,6 +1241,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
             if(reflectscissor) calcwaterscissor();
             drawreflection(hf, w, h, changelod, false);
             if(waterrefract) drawreflection(hf, w, h, changelod, true);
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("frame: water reflections complete");
+#endif
         }
     }
 
@@ -1241,9 +1253,15 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     glEnable(GL_TEXTURE_2D);
 
     resetcubes();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: cube reset complete");
+#endif
 
     render_world(camera1->o.x, camera1->o.y, camera1->o.z, changelod,
             (int)camera1->yaw, (int)camera1->pitch, dynfov(), fovy, w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: world rendering complete");
+#endif
 
     setupstrips();
 
@@ -1273,6 +1291,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     startmodelbatches();
     rendermapmodels();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: map models complete");
+#endif
 
     if(effective_stencilshadow && hasstencil && stencilbits >= 8) drawstencilshadows();
 
@@ -1281,19 +1302,31 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     endmodelbatches();
 
     readdepth(w, h, worldpos);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: depth read complete");
+#endif
 
     startmodelbatches();
     renderclients();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: clients rendered");
+#endif
 
     startmodelbatches();
     renderentities();
     renderbounceents();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: entities rendered");
+#endif
 
     WaypointClass.Think();// Rick: Need to do here because of drawing the waypoints
     
     drawhudgun();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: HUD gun complete");
+#endif
 
     resettmu(0);
 
@@ -1302,6 +1335,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     render_particles(curtime, PT_DECAL_MASK);
 
     int nquads = renderwater(hf, !effective_waterreflect || underwater ? 0 : reflecttex, !effective_waterreflect || !waterrefract || underwater ? 0 : refracttex);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: water rendering complete");
+#endif
 
     render_particles(curtime, ~PT_DECAL_MASK);
 
@@ -1324,10 +1360,16 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
 
     extern vector<vertex> verts;
     gl_drawhud(w, h, int(curfps + 0.5f), nquads, verts.length(), underwater, elapsed);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: HUD complete");
+#endif
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_FOG);
 
     undodynlights();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: dynamic lights restored; drawframe complete");
+#endif
 }
 
