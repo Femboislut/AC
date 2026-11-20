@@ -144,6 +144,9 @@ target_compile_features(AssaultCubeEngine PUBLIC cxx_std_11)
 # Enable the platform-specific SDL2/GL4ES path in source/src/main.cpp.
 # Without this definition, the iOS renderer setup and lifecycle handling are compiled out.
 target_compile_definitions(AssaultCubeEngine PUBLIC AC_PLATFORM_IOS=1)
+# Apple platforms do not support unnamed POSIX semaphores (sem_init). Use
+# SDL_CreateThread/SDL_CreateSemaphore, which are already linked by this target.
+target_compile_definitions(AssaultCubeEngine PUBLIC AC_USE_SDL_THREADS=1)
 # Match the upstream client Makefile's signed-char behavior while retaining\n# the compiler defaults for RTTI and exception handling.\ntarget_compile_options(AssaultCubeEngine PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-fsigned-char>")
 set_target_properties(AssaultCubeEngine PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
