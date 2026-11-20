@@ -737,6 +737,9 @@ void resetgl()
     iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
     iosstartup_log("startup: setupscreen done");
+#if defined(AC_PLATFORM_IOS)
+    ioskeyboardoverlayupdate();
+#endif
     iosstartup_log("startup: gl_init begin");
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
     iosstartup_log("startup: gl_init done");
