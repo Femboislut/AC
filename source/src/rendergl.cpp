@@ -3,6 +3,10 @@
 #include "cube.h"
 #include "bot/bot.h"
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#endif
+
 bool hasTE = false, hasMT = false, hasMDA = false, hasDRE = false, hasstencil = false, hasST2 = false, hasSTW = false, hasSTS = false, hasAF;
 
 // GL_ARB_multitexture
