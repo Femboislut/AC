@@ -14,6 +14,7 @@ extern bool menuvisible();
 static void close_ios_gl4es();
 static bool iosmenumode = true;
 static bool ioslastmenuvisible = true;
+static bool iosprofileinitialized = false;
 extern "C" void ac_ios_input_mode_update(int menuMode);
 extern "C" void ac_ios_touch_hud_update(int enabled, float scale);
 extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity);
@@ -227,6 +228,12 @@ void inputgrab(bool on, bool delay = false)
 
 void setfullscreen(bool enable)
 {
+#if defined(AC_PLATFORM_IOS)
+    // iOS owns the full-screen drawable. Desktop fullscreen/resolution changes
+    // must never resize or recreate the UIKit-backed SDL window.
+    (void)enable;
+    return;
+#else
     if(!screen) return;
     if(enable == !(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN))
     {
@@ -236,6 +243,7 @@ void setfullscreen(bool enable)
         if(!enable) SDL_SetWindowSize(screen, scr_w, scr_h);
         if(!enable && centerwindow) SDL_SetWindowPosition(screen, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
+#endif
 }
 
 VARF(fullscreen, 0, 1, 1, setfullscreen(fullscreen != 0));
@@ -754,9 +762,16 @@ void resetgl()
     c2skeepalive();
 
     int useddepthbits = 0, usedfsaa = 0;
+#if defined(AC_PLATFORM_IOS)
+    // Keep the existing UIKit/SDL drawable and its native pixel dimensions.
+    // Calling setupscreen() here can recreate the iOS GL surface and crash.
+    useddepthbits = 0;
+    usedfsaa = 0;
+#else
     iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
     iosstartup_log("startup: setupscreen done");
+#endif
 #if defined(AC_PLATFORM_IOS)
     ioskeyboardoverlayupdate();
 #endif
@@ -824,6 +839,21 @@ void fpsrange(int *low, int *high)
 }
 
 COMMAND(fpsrange, "ii");
+
+#if defined(AC_PLATFORM_IOS)
+extern "C" void ac_ios_save_profile(void)
+{
+    if(!iosprofileinitialized) return;
+    // iOS suspends/kills apps without running the normal quit() path.
+    // Persist the same profile data that quit() writes on desktop.
+    writeinitcfg();
+    writeservercfg();
+    writepcksourcecfg();
+    writecfg();
+    savehistory();
+    entropy_save();
+}
+#endif
 
 #if defined(AC_PLATFORM_IOS)
 extern "C" void ac_ios_keyboard_overlay_update(int enabled, int inputActive, int keyboardVisible, float xPercent, float yPercent, float size);
@@ -1495,6 +1525,9 @@ int main(int argc, char **argv)
     if(*stream_capabilities()) clientlogf("info: %s", stream_capabilities());
 
     bool waitforauth = false;
+#if defined(AC_PLATFORM_IOS)
+    bool ios_first_run = false;
+#endif
     initing = INIT_RESET;
     for(int i = 1; i<argc; i++)
     {
@@ -1589,6 +1622,9 @@ int main(int argc, char **argv)
 #ifdef _DEBUG
     par = SDL_INIT_NOPARACHUTE;
 #endif
+    // SDL otherwise synthesizes mouse clicks from every raw screen touch.
+    // That made camera swipes fire the weapon even when FIRE was untouched.
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     iosstartup_log("startup: SDL_Init requested");
     if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|par)<0) fatal("Unable to initialize SDL");
     iosstartup_log("startup: SDL_Init succeeded");
@@ -1729,6 +1765,9 @@ int main(int argc, char **argv)
     initing = INIT_LOAD;
     if(!execfile("config/saved.cfg"))
     {
+#if defined(AC_PLATFORM_IOS)
+        ios_first_run = true;
+#endif
         exec("config/defaults.cfg");
         bootstrapentropy += 5 + rnd(7);
     }
@@ -1742,6 +1781,12 @@ int main(int argc, char **argv)
     autostartscripts("");    // all remaining scripts
     execfile("config/autoexec.cfg");
     exechook(HOOK_SP_MP, "autoexec", "");
+#if defined(AC_PLATFORM_IOS)
+    // Use the highest iOS-safe quality profile on first launch only. Users can
+    // subsequently change it and their chosen values are saved in Profile.
+    if(ios_first_run) execute("new_gfx_quality 6");
+    iosprofileinitialized = true;
+#endif
 
 
 
