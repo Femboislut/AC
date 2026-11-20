@@ -806,15 +806,16 @@ COMMAND(fpsrange, "ii");
 extern "C" void ac_ios_keyboard_overlay_update(int enabled, int inputActive, int keyboardVisible, float xPercent, float yPercent, float size);
 extern "C" void ac_ios_toggle_keyboard();
 static bool ioskeyboardvisible = false;
+static void ioskeyboardoverlayupdate();
+VARFP(ioskeyboardbutton, 0, 1, 1, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardx, 0, 92, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardy, 0, 7, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardsize, 32, 48, 80, ioskeyboardoverlayupdate());
 static void ioskeyboardoverlayupdate()
 {
     ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
                                   (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
 }
-VARFP(ioskeyboardbutton, 0, 1, 1, ioskeyboardoverlayupdate());
-VARFP(ioskeyboardx, 0, 92, 100, ioskeyboardoverlayupdate());
-VARFP(ioskeyboardy, 0, 7, 100, ioskeyboardoverlayupdate());
-VARFP(ioskeyboardsize, 32, 48, 80, ioskeyboardoverlayupdate());
 extern "C" void ac_ios_toggle_keyboard()
 {
     if(!textinputmask)
