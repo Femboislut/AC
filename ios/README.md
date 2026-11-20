@@ -24,14 +24,16 @@ Run #43 failed in the final app link: SDL's Bluetooth HID object referenced Core
 
 This extracts data only. The installer and Windows executables/DLLs are never run.
 
-## Planned mobile experience
+## Mobile input implementation in progress
 
-These are goals, not claims of completed functionality:
+The iOS game target now has a native Aim/Menu switch, a virtual movement stick, fire/jump/crouch/reload/grenade/weapon shortcut buttons, adjustable HUD scale, and optional CoreMotion gyro aiming. These controls inject SDL input events so the existing AssaultCube key bindings and gameplay code remain authoritative. Menu mode is the default and avoids the engine's normal first-click-to-capture behavior. See [the touch-control implementation and validation notes](../docs/ios-mobile-controls.md).
+
+The following remain planned or require further work:
 
 - SDL-owned iOS app lifecycle and engine launch.
 - Native game-data and profile path handoff (`Documents/GameData` and `Documents/Profile`).
-- Touch HUD: joystick, camera-look zone, fire, jump, crouch, reload, weapon switch; multi-touch and independent look/fire; movable, resizable, opacity-adjustable controls and saved layouts.
-- Gyroscope aiming using CoreMotion: enable/disable, calibration, sensitivity, horizontal/vertical inversion and mode options.
+- Touch HUD: per-control dragging, opacity adjustment, individual button remapping, and saved custom layouts.
+- Gyroscope aiming: physical-device axis calibration, horizontal/vertical inversion and fine-grained mode options.
 - Bluetooth controller support: configurable mapping, dead zones and vibration where supported.
 - In-game settings pages: controls, gyro, graphics, FOV, crosshair, HUD, audio, gameplay and accessibility.
 - Multiplayer UI improvements: server list refresh, favourites, ping, direct connect and reconnect.
@@ -59,7 +61,7 @@ SDL2 should own the UIKit application entry point, window, GLES context and even
 Before describing a build as playable, verify on-device:
 1. App launches and doesn't immediately crash.
 2. Imported assets are discovered and the initial map/menu loads.
-3. Touch movement, looking, firing, multi-touch, and buttons work without interfering.
+3. Menu clicks, touch movement, looking, firing, multi-touch, and buttons work without interfering.
 4. Gyroscope responds correctly in both axes, including calibration and inversion.
 5. Controller input and reconnect behaviour are tested.
 6. Graphics, sound, settings persistence, background/resume and quit are checked.
