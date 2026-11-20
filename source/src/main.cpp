@@ -10,6 +10,8 @@ extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 static bool iosmenumode = true;
 extern "C" void ac_ios_input_mode_update(int menuMode);
+extern "C" void ac_ios_touch_hud_update(int enabled, float scale);
+extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity);
 
 // Startup diagnostics are disabled for iOS builds. Keep this externally
 // linked because other engine translation units call iosstartup_log().
@@ -828,11 +830,17 @@ VARFP(ioskeyboardbutton, 0, 1, 1, ioskeyboardoverlayupdate());
 VARFP(ioskeyboardx, 0, 92, 100, ioskeyboardoverlayupdate());
 VARFP(ioskeyboardy, 0, 7, 100, ioskeyboardoverlayupdate());
 VARFP(ioskeyboardsize, 32, 48, 80, ioskeyboardoverlayupdate());
+VARFP(ioshud, 0, 1, 1, ioskeyboardoverlayupdate());
+VARFP(ioshudscale, 60, 100, 140, ioskeyboardoverlayupdate());
+VARFP(iosgyro, 0, 0, 1, ioskeyboardoverlayupdate());
+VARFP(iosgyrosensitivity, 10, 100, 300, ioskeyboardoverlayupdate());
 static void ioskeyboardoverlayupdate()
 {
     ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
                                   (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
     ac_ios_input_mode_update(iosmenumode ? 1 : 0);
+    ac_ios_touch_hud_update(ioshud, (float)ioshudscale / 100.0f);
+    ac_ios_gyro_config_update(iosgyro, (float)iosgyrosensitivity / 100.0f);
 }
 extern "C" void ac_ios_toggle_keyboard()
 {
@@ -871,6 +879,16 @@ extern "C" void ac_ios_virtual_mouse(int down)
     event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
     event.button.clicks = 1;
     SDL_PushEvent(&event);
+}
+
+extern "C" void ac_ios_gyro_motion(float dx, float dy)
+{
+    SDL_Event event = {};
+    event.type = SDL_MOUSEMOTION;
+    event.motion.type = SDL_MOUSEMOTION;
+    event.motion.xrel = (int)lrintf(dx);
+    event.motion.yrel = (int)lrintf(dy);
+    if(event.motion.xrel || event.motion.yrel) SDL_PushEvent(&event);
 }
 #else
 static void ioskeyboardoverlayupdate() {}
