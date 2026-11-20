@@ -4,6 +4,13 @@
 #include "cube.h"
 #if defined(AC_PLATFORM_IOS)
 extern void iosstartup_log(const char *message);
+#define IOS_WELCOME_TRACE(message) iosstartup_log(message)
+#else
+#define IOS_WELCOME_TRACE(message) do { } while(0)
+#endif
+
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
 #define IOS_SERVER_TRACE(message) iosstartup_log(message)
 #else
 #define IOS_SERVER_TRACE(message) do { } while(0)
@@ -2960,15 +2967,26 @@ void welcomeinitclient(packetbuf &p, int exclude = -1)
 
 void welcomepacket(packetbuf &p, int n)
 {
-    if(!sg->smapname[0]) maprot.next(false);
+    IOS_WELCOME_TRACE("welcome-path: welcomepacket entered");
+    IOS_WELCOME_TRACE("welcome-path: before map rotation check");
+    if(!sg->smapname[0])
+    {
+        IOS_WELCOME_TRACE("welcome-path: map name empty; before maprot.next");
+        maprot.next(false);
+        IOS_WELCOME_TRACE("welcome-path: maprot.next returned");
+    }
 
+    IOS_WELCOME_TRACE("welcome-path: before valid_client");
     client *c = valid_client(n) ? clients[n] : NULL;
+    IOS_WELCOME_TRACE("welcome-path: valid_client checked");
     int numcl = numclients();
+    IOS_WELCOME_TRACE("welcome-path: numclients returned");
 
     putint(p, SV_WELCOME);
     putint(p, sg->smapname[0] && !m_demo ? numcl : -1);
     if(sg->smapname[0] && !m_demo)
     {
+        IOS_WELCOME_TRACE("welcome-path: map block entered");
         putint(p, SV_MAPCHANGE);
         sendstring(sg->smapname, p);
         putint(p, sg->smode);
@@ -2982,11 +3000,15 @@ void welcomepacket(packetbuf &p, int n)
             putint(p, sg->gamelimit);
             //putint(p, sg->minremain*60);
         }
+        IOS_WELCOME_TRACE("welcome-path: before send_item_list");
         send_item_list(p); // this includes the flags
+        IOS_WELCOME_TRACE("welcome-path: send_item_list returned");
     }
     savedscore *sc = NULL;
+    IOS_WELCOME_TRACE("welcome-path: before client-specific block");
     if(c)
     {
+        IOS_WELCOME_TRACE("welcome-path: client pointer valid");
         if(c->type == ST_TCPIP && serveroperator() != -1) sendserveropinfo(n);
         c->team = sg->mastermode == MM_MATCH && sc ? team_tospec(sc->team) : TEAM_SPECT;
         putint(p, SV_SETTEAM);
@@ -2997,8 +3019,10 @@ void welcomepacket(packetbuf &p, int n)
         putint(p, n);
         sendf(-1, 1, "ri2x", SV_FORCEDEATH, n, n);
     }
+    IOS_WELCOME_TRACE("welcome-path: before resume block");
     if(!c || clients.length()>1)
     {
+        IOS_WELCOME_TRACE("welcome-path: resume block entered");
         putint(p, SV_RESUME);
         loopv(clients)
         {
@@ -3020,14 +3044,18 @@ void welcomepacket(packetbuf &p, int n)
         }
         putint(p, -1);
         welcomeinitclient(p, n);
+        IOS_WELCOME_TRACE("welcome-path: welcomeinitclient returned");
     }
+    IOS_WELCOME_TRACE("welcome-path: before server mode");
     putint(p, SV_SERVERMODE);
     putint(p, sendservermode(false));
     putint(p, SV_PAUSEMODE);
     putint(p, sg->sispaused);
     const char *motd = scl.motd[0] ? scl.motd : serverinfomotd.getmsg();
+    IOS_WELCOME_TRACE("welcome-path: motd resolved");
     if(*motd)
     {
+        IOS_WELCOME_TRACE("welcome-path: before motd encoding");
         putint(p, SV_TEXT);
         sendstring(motd, p);
     }
@@ -3035,10 +3063,21 @@ void welcomepacket(packetbuf &p, int n)
 
 void sendwelcome(client *cl, int chan)
 {
+    IOS_WELCOME_TRACE("welcome-path: sendwelcome entered");
+    IOS_WELCOME_TRACE("welcome-path: before packet allocation");
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+    IOS_WELCOME_TRACE("welcome-path: packet allocated");
+    IOS_WELCOME_TRACE("welcome-path: before welcomepacket");
     welcomepacket(p, cl->clientnum);
-    sendpacket(cl->clientnum, chan, p.finalize());
+    IOS_WELCOME_TRACE("welcome-path: welcomepacket returned");
+    IOS_WELCOME_TRACE("welcome-path: before finalize");
+    ENetPacket *welcome = p.finalize();
+    IOS_WELCOME_TRACE("welcome-path: packet finalized");
+    IOS_WELCOME_TRACE("welcome-path: before sendpacket");
+    sendpacket(cl->clientnum, chan, welcome);
+    IOS_WELCOME_TRACE("welcome-path: sendpacket returned");
     cl->haswelcome = true;
+    IOS_WELCOME_TRACE("welcome-path: sendwelcome complete");
 }
 
 void forcedeath(client *cl)
