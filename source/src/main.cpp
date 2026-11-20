@@ -1100,7 +1100,11 @@ void checkinput()
                     resetmousemotion();
                     tdx+=dx;tdy+=dy;
                 }
+#if defined(AC_PLATFORM_IOS)
+                else if (shouldgrab && !iosmenumode) inputgrab(grabinput = true);
+#else
                 else if (shouldgrab) inputgrab(grabinput = true);
+#endif
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
