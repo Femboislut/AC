@@ -714,6 +714,10 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 
 extern int hirestextures;
 
+#if defined(AC_PLATFORM_IOS)
+static void ioskeyboardoverlayupdate();
+#endif
+
 void resetgl()
 {
     clearchanges(CHANGE_GFX);
@@ -734,9 +738,10 @@ void resetgl()
     c2skeepalive();
 
 #if defined(AC_PLATFORM_IOS)
-static void ioskeyboardoverlayupdate();
-#endif
     int useddepthbits = 0, usedfsaa = 0;
+#else
+    int useddepthbits = 0, usedfsaa = 0;
+#endif
     iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
     iosstartup_log("startup: setupscreen done");
