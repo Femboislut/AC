@@ -70,6 +70,7 @@ targets:
     sources:
       - path: AssaultCubeGame/BootstrapAnchor.m
       - path: AssaultCubeGame/IOSGameDataBootstrap.swift
+      - path: AssaultCubeGame/KeyboardOverlay.swift
       - path: AssaultCubeApp/Assets.xcassets
     resources:
       - path: NSISExtractor/LICENSE
