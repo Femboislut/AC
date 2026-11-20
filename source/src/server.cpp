@@ -3081,9 +3081,24 @@ int deferredprocessingthread(void *nop)
 
 void polldeferredprocessing()
 {
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    static int ios_deferred_trace_count = 0;
+    bool ios_deferred_trace = ios_deferred_trace_count++ < 8;
+#define IOS_DEFERRED_TRACE(message) do { if(ios_deferred_trace) iosstartup_log(message); } while(0)
+#else
+#define IOS_DEFERRED_TRACE(message) do { } while(0)
+#endif
+    IOS_DEFERRED_TRACE("deferred: entered");
     static void *deferredprocessingthread_ti = NULL;
-    if(!deferredprocessingthread_ti) deferredprocessingthread_ti = sl_createthread(deferredprocessingthread, NULL);
+    if(!deferredprocessingthread_ti)
+    {
+        IOS_DEFERRED_TRACE("deferred: before thread creation");
+        deferredprocessingthread_ti = sl_createthread(deferredprocessingthread, NULL);
+        IOS_DEFERRED_TRACE("deferred: after thread creation");
+    }
 
+    IOS_DEFERRED_TRACE("deferred: before auth completion check");
     if(servinfoauth_done)
     {
         servinfoauth *sa = (servinfoauth *)servinfoauth_dropbox;
@@ -3127,7 +3142,10 @@ void polldeferredprocessing()
         }
         delete sa;
     }
+    IOS_DEFERRED_TRACE("deferred: auth completion handled");
     if(!servinfoauths.empty() && servinfoauth_deferred.getvalue() < 1) servinfoauth_deferred.post();
+    IOS_DEFERRED_TRACE("deferred: queue check complete");
+#undef IOS_DEFERRED_TRACE
 }
 
 // server side processing of updates: does very little and most state is tracked client only
