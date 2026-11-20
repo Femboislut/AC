@@ -8,6 +8,8 @@
 #if defined(AC_PLATFORM_IOS)
 extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
+static bool iosmenumode = true;
+extern "C" void ac_ios_input_mode_update(int menuMode);
 
 // Startup diagnostics are disabled for iOS builds. Keep this externally
 // linked because other engine translation units call iosstartup_log().
@@ -706,7 +708,13 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 
     updatescreensize();
 
+#if defined(AC_PLATFORM_IOS)
+    // Start with a visible pointer and working menus. The user explicitly
+    // switches to relative-look mode using the native Aim/Menu control.
+    inputgrab(grabinput = false);
+#else
     inputgrab(grabinput = fullscreen ? true : false);
+#endif
 
     useddepthbits = config&1 ? depthbits : 0;
     usedfsaa = config&2 ? fsaa : 0;
@@ -812,6 +820,7 @@ COMMAND(fpsrange, "ii");
 #if defined(AC_PLATFORM_IOS)
 extern "C" void ac_ios_keyboard_overlay_update(int enabled, int inputActive, int keyboardVisible, float xPercent, float yPercent, float size);
 extern "C" void ac_ios_toggle_keyboard();
+extern "C" void ac_ios_toggle_input_mode();
 static bool ioskeyboardvisible = false;
 extern int textinputmask;
 static void ioskeyboardoverlayupdate();
@@ -823,12 +832,20 @@ static void ioskeyboardoverlayupdate()
 {
     ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
                                   (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
+    ac_ios_input_mode_update(iosmenumode ? 1 : 0);
 }
 extern "C" void ac_ios_toggle_keyboard()
 {
     if(ioskeyboardvisible) { SDL_StopTextInput(); ioskeyboardvisible = false; }
     else { SDL_StartTextInput(); ioskeyboardvisible = true; }
     ioskeyboardoverlayupdate();
+}
+
+extern "C" void ac_ios_toggle_input_mode()
+{
+    iosmenumode = !iosmenumode;
+    inputgrab(grabinput = !iosmenumode);
+    ac_ios_input_mode_update(iosmenumode ? 1 : 0);
 }
 #else
 static void ioskeyboardoverlayupdate() {}
@@ -1087,7 +1104,11 @@ void checkinput()
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
+#if defined(AC_PLATFORM_IOS)
+                if(!grabinput && !iosmenumode) // click-to-grab only in explicit Aim mode
+#else
                 if(!grabinput) // click-to-grab
+#endif
                 {
                     EVENTDEBUG(concatformatstring(eb, "(SDL_MOUSEBUTTONDOWN) button %d, state %d, clicks %d, x %d, y %d", event.button.button, event.button.state, event.button.clicks, event.button.x, event.button.y));
                     inputgrab(grabinput = true);
