@@ -1019,7 +1019,16 @@ void checkinput()
 
         EVENTDEBUG(int thres = 1; defformatstring(eb)("EVENT %d", event.type));
 
+#if defined(AC_PLATFORM_IOS)
+        if (focused && event.type != SDL_WINDOWEVENT)
+        {
+            bool wantgrab = focused > 0 && !iosmenumode;
+            if(grabinput != wantgrab) inputgrab(grabinput = wantgrab, shouldgrab);
+            focused = 0;
+        }
+#else
         if (focused && event.type != SDL_WINDOWEVENT) { if (grabinput != (focused > 0)) inputgrab(grabinput = focused > 0, shouldgrab); focused = 0; }
+#endif
 
         switch(event.type)
         {
