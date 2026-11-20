@@ -1191,6 +1191,12 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     extern int mapoverride_nostencilshadows, mapoverride_nowaterreflect;
     effective_stencilshadow = mapoverride_nostencilshadows && !ignoreoverride_nostencilshadows ? 0 : stencilshadow;
     bool effective_waterreflect = waterreflect && !editmode && (!mapoverride_nowaterreflect || ignoreoverride_nowaterreflect);
+#if defined(AC_PLATFORM_IOS)
+    // The legacy reflection path renders the scene recursively into auxiliary
+    // buffers and is not required for the first playable scene. Disable it on
+    // iOS while bringing up the GLES renderer; water is drawn without reflection.
+    effective_waterreflect = false;
+#endif
 
 #if defined(AC_PLATFORM_IOS)
     extern void iosstartup_log(const char *message);
