@@ -1713,12 +1713,27 @@ int main(int argc, char **argv)
         if(frames < 8) iosstartup_log("frame: world update complete");
 #endif
 
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: after world update; before autoscreenshot");
+#endif
         if(needsautoscreenshot) showscores(true);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: autoscreenshot handling complete");
+#endif
 
         serverslice(0);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: serverslice complete");
+#endif
 
         if(elapsed) fps = (1000.0f/elapsed+fps*10)/11; // avoid DIV-by-0
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: fps calculation complete");
+#endif
         frames++;
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: counter increment complete; before audio");
+#endif
 
         audiomgr.updateaudio();
 #if defined(AC_PLATFORM_IOS)
