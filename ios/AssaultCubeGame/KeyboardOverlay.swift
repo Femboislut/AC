@@ -319,7 +319,7 @@ private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
         UserDefaults.standard.set(layouts, forKey: layoutDefaultsKey)
     }
 
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === joystickPan { return !editingControls }
         return editingControls
     }
