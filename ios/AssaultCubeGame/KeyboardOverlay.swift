@@ -428,8 +428,11 @@ private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
                 var yaw = rate.y
                 var pitch = rate.x
                 switch orientation {
-                case .landscapeRight: yaw = -rate.y; pitch = -rate.x
-                case .landscapeLeft: yaw = rate.y; pitch = rate.x
+                // In landscape, the device's X/Y axes rotate relative to the
+                // screen. Map them to screen-horizontal and screen-vertical
+                // aiming (the prior mapping made the axes cross).
+                case .landscapeRight: yaw = -rate.x; pitch = -rate.y
+                case .landscapeLeft: yaw = rate.x; pitch = rate.y
                 case .portrait: yaw = rate.z; pitch = rate.x
                 case .portraitUpsideDown: yaw = -rate.z; pitch = -rate.x
                 default: break
