@@ -12,9 +12,6 @@ This document records the current status, build pipeline, import procedure, and 
 - CI previously compiled ARM64 SDL2, GL4ES, Ogg/Vorbis, ENet, and the AssaultCube engine library.
 - The SDL/GL4ES smoke-test IPA is a renderer/bootstrap test, not gameplay.
 
-### Current build issue and fix
-Run #43 failed in the final app link: SDL's Bluetooth HID object referenced CoreBluetooth symbols, but the game target didn't link CoreBluetooth. Added the framework to the AssaultCubeGame target. The follow-up CI run will verify the correction.
-
 ## Import game data from an iPhone
 
 1. Download the official Windows AssaultCube installer from [the official downloads page](https://assault.cubers.net/download.html).
