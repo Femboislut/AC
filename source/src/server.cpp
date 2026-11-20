@@ -428,8 +428,16 @@ void cleanworldstate(ENetPacket *packet)
    }
 }
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#define IOS_PACKET_TRACE(message) iosstartup_log(message)
+#else
+#define IOS_PACKET_TRACE(message) do { } while(0)
+#endif
+
 void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacket)
 {
+    IOS_PACKET_TRACE("packet-path: sendpacket entered");
     mlog(ACLOG_INFO, "sendpacket: entered n=%d chan=%d packet=%p", n, chan, (void *)packet);
     if(!packet) { mlog(ACLOG_INFO, "sendpacket: NULL packet"); return; }
     mlog(ACLOG_INFO, "sendpacket: packet data=%p len=%u", (void *)packet->data, (unsigned)packet->dataLength);
@@ -451,8 +459,11 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
         }
 
         case ST_LOCAL:
+            IOS_PACKET_TRACE("packet-path: ST_LOCAL selected");
             mlog(ACLOG_INFO, "sendpacket: before local dispatch");
+            IOS_PACKET_TRACE("packet-path: before localservertoclient");
             localservertoclient(chan, packet->data, (int)packet->dataLength, demopacket);
+            IOS_PACKET_TRACE("packet-path: localservertoclient returned");
             mlog(ACLOG_INFO, "sendpacket: local dispatch returned");
             break;
     }
@@ -3190,7 +3201,9 @@ void polldeferredprocessing()
                                 IOS_DEFERRED_TRACE("deferred: continuation packet fields encoded");
                                 ENetPacket *continuationpacket = continuation.finalize();
                                 IOS_DEFERRED_TRACE("deferred: continuation packet finalized");
+                                IOS_PACKET_TRACE("deferred: immediately before continuation sendpacket");
                                 sendpacket(sa->cn, 1, continuationpacket);
+                                IOS_PACKET_TRACE("deferred: continuation sendpacket call returned");
                                 IOS_DEFERRED_TRACE("deferred: continuation sendpacket returned");
                             }
                         }
