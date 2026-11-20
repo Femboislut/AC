@@ -512,23 +512,31 @@ int getbuildtype()
 
 void sendintro()
 {
+    mlog(ACLOG_INFO, "client: sendintro entered; player1=%p", (void *)player1);
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+    mlog(ACLOG_INFO, "client: sendintro packet allocated");
     putint(p, SV_CONNECT);
     putint(p, AC_VERSION);
     putint(p, getbuildtype());
     sendstring(player1->name, p);
+    mlog(ACLOG_INFO, "client: sendintro identity fields written");
     sendstring(genpwdhash(player1->name, clientpassword, sessionid), p);
+    mlog(ACLOG_INFO, "client: sendintro password hash written");
     sendstring(!lang || strlen(lang) != 2 ? "" : lang, p);
     putint(p, connectrole);
     clientpassword[0] = '\0';
     connectrole = CR_DEFAULT;
+    mlog(ACLOG_INFO, "client: sendintro nextprimweap=%p", (void *)player1->nextprimweap);
     putint(p, player1->nextprimweap->type);
+    mlog(ACLOG_INFO, "client: sendintro weapon field written");
     loopi(2) putint(p, player1->skin(i));
     putint(p, player1->maxroll);
     putint(p, player1->maxrolleffect);
     putint(p, player1->ffov);
     putint(p, player1->scopefov);
+    mlog(ACLOG_INFO, "client: sendintro packet fields complete");
     sendpackettoserv(1, p.finalize());
+    mlog(ACLOG_INFO, "client: sendintro packet sent");
 }
 
 void gets2c()           // get updates from the server
