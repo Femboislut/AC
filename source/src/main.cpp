@@ -9,9 +9,9 @@
 extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 
-// Startup diagnostics are disabled for iOS builds. Previous builds wrote an
-// unbounded Documents log at diagnostic checkpoints.
-static void iosstartup_log(const char *) {}
+// Startup diagnostics are disabled for iOS builds. Keep this externally
+// linked because other engine translation units call iosstartup_log().
+void iosstartup_log(const char *) {}
 static void clear_iosstartup_log()
 {
     const char *home = getenv("HOME");
