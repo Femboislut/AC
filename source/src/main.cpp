@@ -826,12 +826,6 @@ static void ioskeyboardoverlayupdate()
 }
 extern "C" void ac_ios_toggle_keyboard()
 {
-    if(!textinputmask)
-    {
-        extern void saycommand(char *);
-        saycommand("");
-        return;
-    }
     if(ioskeyboardvisible) { SDL_StopTextInput(); ioskeyboardvisible = false; }
     else { SDL_StartTextInput(); ioskeyboardvisible = true; }
     ioskeyboardoverlayupdate();
