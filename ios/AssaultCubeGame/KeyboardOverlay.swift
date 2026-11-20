@@ -40,6 +40,7 @@ private final class ACKeyboardOverlayView: UIView {
         super.init(frame: frame)
         backgroundColor = .clear
         isOpaque = false
+        isMultipleTouchEnabled = true
         autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         style(button, titleSize: 15)
@@ -56,6 +57,7 @@ private final class ACKeyboardOverlayView: UIView {
         joystick.layer.cornerRadius = 64
         joystick.isHidden = true
         joystick.isExclusiveTouch = false
+        joystick.isMultipleTouchEnabled = true
         addSubview(joystick)
 
         joystickKnob.backgroundColor = UIColor.white.withAlphaComponent(0.58)
@@ -101,6 +103,7 @@ private final class ACKeyboardOverlayView: UIView {
         target.layer.shadowOffset = CGSize(width: 0, height: 2)
         target.clipsToBounds = false
         target.isExclusiveTouch = false
+        target.isMultipleTouchEnabled = true
         target.adjustsImageWhenHighlighted = true
     }
 
