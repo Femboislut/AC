@@ -321,8 +321,8 @@ private final class ACKeyboardOverlayView: UIView {
     private func refreshTitle() {
         button.setTitle(keyboardVisible ? "⌨ Hide" : "⌨ Show", for: .normal)
         button.accessibilityLabel = keyboardVisible ? "Hide keyboard" : "Show keyboard"
-        modeButton.setTitle(menuMode ? "🎯 Aim" : "☰ Menu", for: .normal)
-        modeButton.accessibilityLabel = menuMode ? "Enable aiming mode" : "Return to menu mode"
+        modeButton.setTitle(menuMode ? "🎮 Play" : "☰ Menu", for: .normal)
+        modeButton.accessibilityLabel = menuMode ? "Show gameplay controls" : "Switch to menu navigation"
     }
 }
 
