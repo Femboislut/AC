@@ -1,4 +1,5 @@
 import UIKit
+import CoreMotion
 
 @_silgen_name("ac_ios_toggle_keyboard")
 private func acEngineToggleKeyboard()
@@ -8,6 +9,8 @@ private func acEngineToggleInputMode()
 private func acEngineVirtualKey(_ key: Int32, _ down: Int32)
 @_silgen_name("ac_ios_virtual_mouse")
 private func acEngineVirtualMouse(_ down: Int32)
+@_silgen_name("ac_ios_gyro_motion")
+private func acEngineGyroMotion(_ dx: Float, _ dy: Float)
 
 private final class ACKeyboardOverlayView: UIView {
     private let button = UIButton(type: .system)
@@ -20,6 +23,11 @@ private final class ACKeyboardOverlayView: UIView {
     private var buttonSize: CGFloat = 48
     private var keyboardVisible = false
     private var menuMode = true
+    private var hudEnabled = true
+    private var hudScale: CGFloat = 1
+    private let motionManager = CMMotionManager()
+    private var gyroEnabled = false
+    private var gyroSensitivity: Double = 1
     private var pressedDirections: Set<Int32> = []
 
     private let keyW: Int32 = 119
@@ -96,11 +104,13 @@ private final class ACKeyboardOverlayView: UIView {
         controlButtons.append(control)
     }
 
-    func configure(x: CGFloat, y: CGFloat, size: CGFloat, visible: Bool, menuMode: Bool) {
+    func configure(x: CGFloat, y: CGFloat, size: CGFloat, visible: Bool, menuMode: Bool, hudEnabled: Bool, hudScale: CGFloat) {
         xPercent = min(max(x, 0), 100)
         yPercent = min(max(y, 0), 100)
         buttonSize = min(max(size, 32), 80)
         keyboardVisible = visible
+        self.hudEnabled = hudEnabled
+        self.hudScale = min(max(hudScale, 0.6), 1.4)
         setMenuMode(menuMode)
         refreshTitle()
         setNeedsLayout()
@@ -108,9 +118,10 @@ private final class ACKeyboardOverlayView: UIView {
 
     func setMenuMode(_ enabled: Bool) {
         menuMode = enabled
-        joystick.isHidden = enabled
-        controlButtons.forEach { $0.isHidden = enabled }
+        joystick.isHidden = enabled || !hudEnabled
+        controlButtons.forEach { $0.isHidden = enabled || !hudEnabled }
         if enabled { releaseAllDirections() }
+        refreshGyroscope()
         refreshTitle()
     }
 
@@ -128,11 +139,12 @@ private final class ACKeyboardOverlayView: UIView {
         modeButton.frame = CGRect(x: max(margin, x - modeWidth - 8), y: y,
                                   width: modeWidth, height: height)
 
-        let joystickSize: CGFloat = 128
-        joystick.frame = CGRect(x: 22, y: max(18, bounds.height - joystickSize - 22),
+        let scale = hudScale
+        let joystickSize: CGFloat = 128 * scale
+        joystick.frame = CGRect(x: 22 * scale, y: max(18 * scale, bounds.height - joystickSize - 22 * scale),
                                 width: joystickSize, height: joystickSize)
         joystick.layer.cornerRadius = joystickSize / 2
-        joystickKnob.frame = CGRect(x: 39, y: 39, width: 50, height: 50)
+        joystickKnob.frame = CGRect(x: 39 * scale, y: 39 * scale, width: 50 * scale, height: 50 * scale)
 
         let fire = controlButtons[0]
         let jump = controlButtons[1]
@@ -142,14 +154,14 @@ private final class ACKeyboardOverlayView: UIView {
         let previous = controlButtons[5]
         let primary = controlButtons[6]
         let secondary = controlButtons[7]
-        fire.frame = CGRect(x: bounds.width - 94, y: bounds.height - 154, width: 76, height: 76)
-        jump.frame = CGRect(x: bounds.width - 180, y: bounds.height - 146, width: 58, height: 58)
-        crouch.frame = CGRect(x: bounds.width - 104, y: bounds.height - 72, width: 54, height: 54)
-        reload.frame = CGRect(x: bounds.width - 170, y: bounds.height - 76, width: 50, height: 50)
-        nade.frame = CGRect(x: bounds.width - 232, y: bounds.height - 142, width: 50, height: 50)
-        previous.frame = CGRect(x: bounds.width - 232, y: bounds.height - 76, width: 50, height: 50)
-        primary.frame = CGRect(x: bounds.width - 292, y: bounds.height - 142, width: 46, height: 46)
-        secondary.frame = CGRect(x: bounds.width - 292, y: bounds.height - 82, width: 46, height: 46)
+        fire.frame = CGRect(x: bounds.width - 94 * scale, y: bounds.height - 154 * scale, width: 76 * scale, height: 76 * scale)
+        jump.frame = CGRect(x: bounds.width - 180 * scale, y: bounds.height - 146 * scale, width: 58 * scale, height: 58 * scale)
+        crouch.frame = CGRect(x: bounds.width - 104 * scale, y: bounds.height - 72 * scale, width: 54 * scale, height: 54 * scale)
+        reload.frame = CGRect(x: bounds.width - 170 * scale, y: bounds.height - 76 * scale, width: 50 * scale, height: 50 * scale)
+        nade.frame = CGRect(x: bounds.width - 232 * scale, y: bounds.height - 142 * scale, width: 50 * scale, height: 50 * scale)
+        previous.frame = CGRect(x: bounds.width - 232 * scale, y: bounds.height - 76 * scale, width: 50 * scale, height: 50 * scale)
+        primary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 142 * scale, width: 46 * scale, height: 46 * scale)
+        secondary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 82 * scale, width: 46 * scale, height: 46 * scale)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -215,6 +227,41 @@ private final class ACKeyboardOverlayView: UIView {
         joystickKnob.center = CGPoint(x: joystick.bounds.midX, y: joystick.bounds.midY)
     }
 
+    func setHUD(enabled: Bool, scale: CGFloat) {
+        hudEnabled = enabled
+        hudScale = min(max(scale, 0.6), 1.4)
+        joystick.isHidden = menuMode || !hudEnabled
+        controlButtons.forEach { $0.isHidden = menuMode || !hudEnabled }
+        if !hudEnabled { releaseAllDirections() }
+        setNeedsLayout()
+    }
+
+    func configureGyroscope(enabled: Bool, sensitivity: Double) {
+        gyroEnabled = enabled
+        gyroSensitivity = min(max(sensitivity, 0.1), 3.0)
+        refreshGyroscope()
+    }
+
+    private func refreshGyroscope() {
+        let shouldRun = gyroEnabled && !menuMode && CMMotionManager().isGyroAvailable
+        if shouldRun && !motionManager.isGyroActive {
+            motionManager.gyroUpdateInterval = 1.0 / 60.0
+            motionManager.startGyroUpdates(to: .main) { [weak self] data, _ in
+                guard let self, !self.menuMode, let rate = data?.rotationRate else { return }
+                let orientation = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }.first?.interfaceOrientation ?? .landscapeRight
+                var yaw = rate.y
+                var pitch = rate.x
+                if orientation == .landscapeRight { yaw = -rate.y; pitch = -rate.x }
+                else if orientation == .portrait { yaw = rate.z; pitch = rate.x }
+                let factor = self.gyroSensitivity * 600.0 / 60.0
+                acEngineGyroMotion(Float(yaw * factor), Float(pitch * factor))
+            }
+        } else if !shouldRun && motionManager.isGyroActive {
+            motionManager.stopGyroUpdates()
+        }
+    }
+
     private func refreshTitle() {
         button.setTitle(keyboardVisible ? "⌨ Hide" : "⌨ Show", for: .normal)
         button.accessibilityLabel = keyboardVisible ? "Hide keyboard" : "Show keyboard"
@@ -226,6 +273,10 @@ private final class ACKeyboardOverlayView: UIView {
 private enum ACKeyboardOverlay {
     static var overlay: ACKeyboardOverlayView?
     private(set) static var menuMode = true
+    private(set) static var hudEnabled = true
+    private(set) static var hudScale: CGFloat = 1
+    private(set) static var gyroEnabled = false
+    private(set) static var gyroSensitivity: Double = 1
 
     static func update(enabled: Bool, inputActive: Bool, visible: Bool,
                        x: CGFloat, y: CGFloat, size: CGFloat) {
@@ -253,7 +304,8 @@ private enum ACKeyboardOverlay {
                 overlay = newOverlay
             }
             overlay?.frame = root.bounds
-            overlay?.configure(x: x, y: y, size: size, visible: visible, menuMode: menuMode)
+            overlay?.configure(x: x, y: y, size: size, visible: visible, menuMode: menuMode,
+                               hudEnabled: hudEnabled, hudScale: hudScale)
             root.bringSubviewToFront(overlay!)
         }
     }
@@ -263,6 +315,22 @@ private enum ACKeyboardOverlay {
 public func acIOSInputModeUpdate(_ menuMode: Int32) {
     ACKeyboardOverlay.menuMode = menuMode != 0
     DispatchQueue.main.async { ACKeyboardOverlay.overlay?.setMenuMode(ACKeyboardOverlay.menuMode) }
+}
+
+@_cdecl("ac_ios_touch_hud_update")
+public func acIOSTouchHUDUpdate(_ enabled: Int32, _ scale: Float) {
+    ACKeyboardOverlay.hudEnabled = enabled != 0
+    ACKeyboardOverlay.hudScale = CGFloat(scale)
+    DispatchQueue.main.async { ACKeyboardOverlay.overlay?.setHUD(
+        enabled: ACKeyboardOverlay.hudEnabled, scale: ACKeyboardOverlay.hudScale) }
+}
+
+@_cdecl("ac_ios_gyro_config_update")
+public func acIOSGyroConfigUpdate(_ enabled: Int32, _ sensitivity: Float) {
+    ACKeyboardOverlay.gyroEnabled = enabled != 0
+    ACKeyboardOverlay.gyroSensitivity = Double(sensitivity)
+    DispatchQueue.main.async { ACKeyboardOverlay.overlay?.configureGyroscope(
+        enabled: ACKeyboardOverlay.gyroEnabled, sensitivity: ACKeyboardOverlay.gyroSensitivity) }
 }
 
 @_cdecl("ac_ios_keyboard_overlay_update")
