@@ -64,6 +64,8 @@ private final class ACKeyboardOverlayView: UIView {
         addKeyButton("RELOAD", key: 114, size: 48)
         addKeyButton("NADE", key: 103, size: 48)
         addKeyButton("PREV", key: 113, size: 48)
+        addKeyButton("PRI", key: 49, size: 46)
+        addKeyButton("SEC", key: 50, size: 46)
         refreshTitle()
     }
 
@@ -138,17 +140,21 @@ private final class ACKeyboardOverlayView: UIView {
         let reload = controlButtons[3]
         let nade = controlButtons[4]
         let previous = controlButtons[5]
+        let primary = controlButtons[6]
+        let secondary = controlButtons[7]
         fire.frame = CGRect(x: bounds.width - 94, y: bounds.height - 154, width: 76, height: 76)
         jump.frame = CGRect(x: bounds.width - 180, y: bounds.height - 146, width: 58, height: 58)
         crouch.frame = CGRect(x: bounds.width - 104, y: bounds.height - 72, width: 54, height: 54)
         reload.frame = CGRect(x: bounds.width - 170, y: bounds.height - 76, width: 50, height: 50)
         nade.frame = CGRect(x: bounds.width - 232, y: bounds.height - 142, width: 50, height: 50)
         previous.frame = CGRect(x: bounds.width - 232, y: bounds.height - 76, width: 50, height: 50)
+        primary.frame = CGRect(x: bounds.width - 292, y: bounds.height - 142, width: 46, height: 46)
+        secondary.frame = CGRect(x: bounds.width - 292, y: bounds.height - 82, width: 46, height: 46)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard isUserInteractionEnabled, !isHidden, alpha > 0.01 else { return nil }
-        let candidates: [UIView] = [button, modeButton, joystick] + controlButtons.reversed()
+        let candidates: [UIView] = [button, modeButton, joystick] + controlButtons.reversed().map { $0 as UIView }
         for view in candidates where !view.isHidden {
             let local = view.convert(point, from: self)
             if view.bounds.contains(local) {
