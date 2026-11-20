@@ -108,7 +108,7 @@ private enum ACKeyboardOverlay {
 public func acIOSKeyboardOverlayUpdate(_ enabled: Int32, _ inputActive: Int32,
                                       _ keyboardVisible: Int32, _ x: Float, _ y: Float,
                                       _ size: Float) {
-    ACKKeyboardOverlay.update(enabled: enabled != 0, inputActive: inputActive != 0,
+    ACKeyboardOverlay.update(enabled: enabled != 0, inputActive: inputActive != 0,
                               visible: keyboardVisible != 0, x: CGFloat(x), y: CGFloat(y),
                               size: CGFloat(size))
 }
