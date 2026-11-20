@@ -1704,8 +1704,14 @@ int main(int argc, char **argv)
         totalmillis = millis;
 
         checkinput();
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: input processing complete");
+#endif
 
         if(lastmillis) updateworld(curtime, lastmillis);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: world update complete");
+#endif
 
         if(needsautoscreenshot) showscores(true);
 
@@ -1715,12 +1721,27 @@ int main(int argc, char **argv)
         frames++;
 
         audiomgr.updateaudio();
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: audio update complete");
+#endif
 
         computeraytable(camera1->o.x, camera1->o.y, dynfov());
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: ray table complete");
+#endif
         if(frames>3 && !minimized)
         {
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: gl_drawframe begin");
+#endif
             gl_drawframe(screenw, screenh, fps<lowfps ? fps/lowfps : (fps>highfps ? fps/highfps : 1.0f), fps, elapsed);
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: gl_drawframe complete");
+#endif
             if(frames>4) SDL_GL_SwapWindow(screen);
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: buffer swap complete");
+#endif
         }
 
         if(needsautoscreenshot)
