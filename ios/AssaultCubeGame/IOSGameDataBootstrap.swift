@@ -107,6 +107,24 @@ private final class ACGameDataBootstrapController: UIViewController, UIDocumentP
     }
 }
 
+/// Keep the iOS-only menu entries in the imported game's actual config tree.
+/// GameDataStore imports the Windows install separately from the app bundle, so
+/// this overlay must be applied on every launch, including after an earlier import.
+private func installIOSSettingsMenu(using store: GameDataStore) {
+    guard let bundled = Bundle.main.url(forResource: "menus_settings", withExtension: "cfg") else {
+        NSLog("AssaultCube iOS: bundled menus_settings.cfg is missing")
+        return
+    }
+    let target = store.gameDataDirectory.appendingPathComponent("config/menus_settings.cfg")
+    do {
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let data = try Data(contentsOf: bundled)
+        try data.write(to: target, options: .atomic)
+    } catch {
+        NSLog("AssaultCube iOS: could not install mobile settings menu: %@", error.localizedDescription)
+    }
+}
+
 /// C-callable preflight invoked by AssaultCube's SDL_main before any engine or
 /// renderer initialization. Returns only after valid game data is installed.
 @MainActor
@@ -115,6 +133,7 @@ public func ac_ios_ensure_game_data() -> Int32 {
     let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     let store = GameDataStore(documentsDirectory: documents)
     if store.status().isValid {
+        installIOSSettingsMenu(using: store)
         return 0
     }
 
@@ -131,5 +150,6 @@ public func ac_ios_ensure_game_data() -> Int32 {
 
     window.isHidden = true
     window.rootViewController = nil
+    installIOSSettingsMenu(using: store)
     return 0
 }
