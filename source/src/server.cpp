@@ -3123,12 +3123,19 @@ void polldeferredprocessing()
                     if(clients[sa->cn]->clientsequence == sa->clientsequence)
                     {
                         IOS_DEFERRED_TRACE("deferred: client sequence matches");
-                        if(!sa->success) disconnect_client(sa->cn, DISC_AUTH);
+                        if(!sa->success)
+                        {
+                            IOS_DEFERRED_TRACE("deferred: auth result failed; before disconnect");
+                            disconnect_client(sa->cn, DISC_AUTH);
+                            IOS_DEFERRED_TRACE("deferred: disconnect returned");
+                        }
                         else
                         {
+                            IOS_DEFERRED_TRACE("deferred: auth result succeeded");
                             client *cl = clients[sa->cn];
                             if(sa->wantauth)
                             {
+                                IOS_DEFERRED_TRACE("deferred: authenticated client path");
                                 memcpy(cl->pubkey.u, sa->clientpubkey, 32);
                                 memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
                                 bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
@@ -3146,9 +3153,16 @@ void polldeferredprocessing()
                                 cl->needsauth = true;
                                 int datecodes = 0, *vs = cl->vita->vs;
                                 loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
+                                IOS_DEFERRED_TRACE("deferred: before authenticated continuation send");
                                 sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
+                                IOS_DEFERRED_TRACE("deferred: authenticated continuation send returned");
                             }
-                            else sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
+                            else
+                            {
+                                IOS_DEFERRED_TRACE("deferred: before unauthenticated continuation send");
+                                sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
+                                IOS_DEFERRED_TRACE("deferred: unauthenticated continuation send returned");
+                            }
                         }
                     }
                     else IOS_DEFERRED_TRACE("deferred: stale client sequence; discarding result");
