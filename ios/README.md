@@ -40,7 +40,7 @@ These are goals, not claims of completed functionality:
 
 ## iOS keyboard toggle and diagnostics
 
-- When an SDL text-entry field is active, a floating **⌨ Hide / Show** control appears near the top of the screen. It dismisses or reopens the iOS keyboard without leaving the text field.
+- A floating **⌨ Hide / Show** control stays near the top of the screen. It hides or reopens the iOS keyboard; when no text field is active, tapping it opens the engine command input.
 - Its saved config variables can be customized from the in-game console: `ioskeyboardbutton 1` enables it, `ioskeyboardx 92` and `ioskeyboardy 7` move it (0–100 percent), and `ioskeyboardsize 48` adjusts its size (32–80 points). Set `ioskeyboardbutton 0` to hide it.
 - iOS builds no longer write the persistent startup breadcrumb file or client diagnostic log. Existing `Documents/AssaultCubeStartup.log` is deleted on launch.
 
