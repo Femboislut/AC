@@ -847,6 +847,31 @@ extern "C" void ac_ios_toggle_input_mode()
     inputgrab(grabinput = !iosmenumode);
     ac_ios_input_mode_update(iosmenumode ? 1 : 0);
 }
+
+// UIKit touch-HUD controls are translated into ordinary SDL input events so
+// AssaultCube's existing key bindings and weapon/action code remain authoritative.
+extern "C" void ac_ios_virtual_key(int key, int down)
+{
+    SDL_Event event = {};
+    event.type = down ? SDL_KEYDOWN : SDL_KEYUP;
+    event.key.type = event.type;
+    event.key.state = down ? SDL_PRESSED : SDL_RELEASED;
+    event.key.repeat = 0;
+    event.key.keysym.sym = key;
+    event.key.keysym.scancode = SDL_GetScancodeFromKey((SDL_Keycode)key);
+    SDL_PushEvent(&event);
+}
+
+extern "C" void ac_ios_virtual_mouse(int down)
+{
+    SDL_Event event = {};
+    event.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
+    event.button.type = event.type;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
+    event.button.clicks = 1;
+    SDL_PushEvent(&event);
+}
 #else
 static void ioskeyboardoverlayupdate() {}
 #endif
