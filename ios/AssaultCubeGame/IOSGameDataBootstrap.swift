@@ -2,6 +2,29 @@ import Foundation
 import UIKit
 import UniformTypeIdentifiers
 import AssaultCubeData
+import Darwin
+
+@_silgen_name("ac_ios_save_profile")
+private func acEngineSaveProfile()
+
+private enum ACProfileLifecycle {
+    static var observers: [NSObjectProtocol] = []
+
+    static func install() {
+        guard observers.isEmpty else { return }
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { _ in acEngineSaveProfile() })
+        observers.append(center.addObserver(
+            forName: UIApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { _ in acEngineSaveProfile() })
+    }
+}
 
 /// Runs before SDL initializes. The SDL UIKit application and its main run loop
 /// already exist at this point, so this controller can safely collect game data
@@ -130,7 +153,22 @@ private func installIOSSettingsMenu(using store: GameDataStore) {
 @MainActor
 @_cdecl("ac_ios_ensure_game_data")
 public func ac_ios_ensure_game_data() -> Int32 {
+    // Use Foundation's authoritative sandbox home path for the C++ --home
+    // argument. This is stable across app launches and follows container moves.
+    let home = NSHomeDirectory()
+    setenv("HOME", home, 1)
     let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    let profile = documents.appendingPathComponent("Profile", isDirectory: true)
+    do {
+        try FileManager.default.createDirectory(
+            at: profile.appendingPathComponent("config", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+    } catch {
+        NSLog("AssaultCube iOS: could not prepare writable profile: %@", error.localizedDescription)
+    }
+    ACProfileLifecycle.install()
+
     let store = GameDataStore(documentsDirectory: documents)
     if store.status().isValid {
         installIOSSettingsMenu(using: store)
