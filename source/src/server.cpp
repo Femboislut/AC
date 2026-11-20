@@ -2,19 +2,7 @@
 // runs dedicated or as client coroutine
 
 #include "cube.h"
-#if defined(AC_PLATFORM_IOS)
-extern void iosstartup_log(const char *message);
-#define IOS_WELCOME_TRACE(message) iosstartup_log(message)
-#else
-#define IOS_WELCOME_TRACE(message) do { } while(0)
-#endif
 
-#if defined(AC_PLATFORM_IOS)
-extern void iosstartup_log(const char *message);
-#define IOS_SERVER_TRACE(message) iosstartup_log(message)
-#else
-#define IOS_SERVER_TRACE(message) do { } while(0)
-#endif
 
 
 #ifdef STANDALONE
@@ -442,28 +430,15 @@ void cleanworldstate(ENetPacket *packet)
    }
 }
 
-#if defined(AC_PLATFORM_IOS)
-extern void iosstartup_log(const char *message);
-#define IOS_PACKET_TRACE(message) iosstartup_log(message)
-#else
-#define IOS_PACKET_TRACE(message) do { } while(0)
-#endif
 
 void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacket)
 {
-    IOS_PACKET_TRACE("packet-path: sendpacket entered");
-    mlog(ACLOG_INFO, "sendpacket: entered n=%d chan=%d packet=%p", n, chan, (void *)packet);
-    if(!packet) { mlog(ACLOG_INFO, "sendpacket: NULL packet"); return; }
-    mlog(ACLOG_INFO, "sendpacket: packet data=%p len=%u", (void *)packet->data, (unsigned)packet->dataLength);
     if(n<0)
     {
         recordpacket(chan, packet->data, (int)packet->dataLength);
         loopv(clients) if(i!=exclude && (clients[i]->type!=ST_TCPIP || clients[i]->isauthed)) sendpacket(i, chan, packet, -1, demopacket);
         return;
     }
-    if(n>=clients.length()) { mlog(ACLOG_INFO, "sendpacket: invalid client index n=%d clients=%d", n, clients.length()); return; }
-    mlog(ACLOG_INFO, "sendpacket: client ptr=%p type=%d", (void *)clients[n], clients[n] ? clients[n]->type : -1);
-    if(!clients[n]) { mlog(ACLOG_INFO, "sendpacket: NULL client slot"); return; }
     switch(clients[n]->type)
     {
         case ST_TCPIP:
@@ -473,12 +448,7 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
         }
 
         case ST_LOCAL:
-            IOS_PACKET_TRACE("packet-path: ST_LOCAL selected");
-            mlog(ACLOG_INFO, "sendpacket: before local dispatch");
-            IOS_PACKET_TRACE("packet-path: before localservertoclient");
             localservertoclient(chan, packet->data, (int)packet->dataLength, demopacket);
-            IOS_PACKET_TRACE("packet-path: localservertoclient returned");
-            mlog(ACLOG_INFO, "sendpacket: local dispatch returned");
             break;
     }
 }
@@ -2967,26 +2937,22 @@ void welcomeinitclient(packetbuf &p, int exclude = -1)
 
 void welcomepacket(packetbuf &p, int n)
 {
-    IOS_WELCOME_TRACE("welcome-path: welcomepacket entered");
-    IOS_WELCOME_TRACE("welcome-path: before map rotation check");
     if(!sg->smapname[0])
     {
-        IOS_WELCOME_TRACE("welcome-path: map name empty; before maprot.next");
-        maprot.next(false);
-        IOS_WELCOME_TRACE("welcome-path: maprot.next returned");
+        // The local server can receive its first SV_CONNECT before any map has
+        // been selected. In local mode maprot.next() reuses getclientmap(),
+        // which is empty on first launch and makes startgame() abort. Start a
+        // known stock map instead, then build the welcome packet from that state.
+        startgame("ac_desert", getclientmode(), -1, false);
     }
 
-    IOS_WELCOME_TRACE("welcome-path: before valid_client");
     client *c = valid_client(n) ? clients[n] : NULL;
-    IOS_WELCOME_TRACE("welcome-path: valid_client checked");
     int numcl = numclients();
-    IOS_WELCOME_TRACE("welcome-path: numclients returned");
 
     putint(p, SV_WELCOME);
     putint(p, sg->smapname[0] && !m_demo ? numcl : -1);
     if(sg->smapname[0] && !m_demo)
     {
-        IOS_WELCOME_TRACE("welcome-path: map block entered");
         putint(p, SV_MAPCHANGE);
         sendstring(sg->smapname, p);
         putint(p, sg->smode);
@@ -3000,15 +2966,11 @@ void welcomepacket(packetbuf &p, int n)
             putint(p, sg->gamelimit);
             //putint(p, sg->minremain*60);
         }
-        IOS_WELCOME_TRACE("welcome-path: before send_item_list");
         send_item_list(p); // this includes the flags
-        IOS_WELCOME_TRACE("welcome-path: send_item_list returned");
     }
     savedscore *sc = NULL;
-    IOS_WELCOME_TRACE("welcome-path: before client-specific block");
     if(c)
     {
-        IOS_WELCOME_TRACE("welcome-path: client pointer valid");
         if(c->type == ST_TCPIP && serveroperator() != -1) sendserveropinfo(n);
         c->team = sg->mastermode == MM_MATCH && sc ? team_tospec(sc->team) : TEAM_SPECT;
         putint(p, SV_SETTEAM);
@@ -3019,10 +2981,8 @@ void welcomepacket(packetbuf &p, int n)
         putint(p, n);
         sendf(-1, 1, "ri2x", SV_FORCEDEATH, n, n);
     }
-    IOS_WELCOME_TRACE("welcome-path: before resume block");
     if(!c || clients.length()>1)
     {
-        IOS_WELCOME_TRACE("welcome-path: resume block entered");
         putint(p, SV_RESUME);
         loopv(clients)
         {
@@ -3044,18 +3004,14 @@ void welcomepacket(packetbuf &p, int n)
         }
         putint(p, -1);
         welcomeinitclient(p, n);
-        IOS_WELCOME_TRACE("welcome-path: welcomeinitclient returned");
     }
-    IOS_WELCOME_TRACE("welcome-path: before server mode");
     putint(p, SV_SERVERMODE);
     putint(p, sendservermode(false));
     putint(p, SV_PAUSEMODE);
     putint(p, sg->sispaused);
     const char *motd = scl.motd[0] ? scl.motd : serverinfomotd.getmsg();
-    IOS_WELCOME_TRACE("welcome-path: motd resolved");
     if(*motd)
     {
-        IOS_WELCOME_TRACE("welcome-path: before motd encoding");
         putint(p, SV_TEXT);
         sendstring(motd, p);
     }
@@ -3063,21 +3019,11 @@ void welcomepacket(packetbuf &p, int n)
 
 void sendwelcome(client *cl, int chan)
 {
-    IOS_WELCOME_TRACE("welcome-path: sendwelcome entered");
-    IOS_WELCOME_TRACE("welcome-path: before packet allocation");
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
-    IOS_WELCOME_TRACE("welcome-path: packet allocated");
-    IOS_WELCOME_TRACE("welcome-path: before welcomepacket");
     welcomepacket(p, cl->clientnum);
-    IOS_WELCOME_TRACE("welcome-path: welcomepacket returned");
-    IOS_WELCOME_TRACE("welcome-path: before finalize");
     ENetPacket *welcome = p.finalize();
-    IOS_WELCOME_TRACE("welcome-path: packet finalized");
-    IOS_WELCOME_TRACE("welcome-path: before sendpacket");
     sendpacket(cl->clientnum, chan, welcome);
-    IOS_WELCOME_TRACE("welcome-path: sendpacket returned");
     cl->haswelcome = true;
-    IOS_WELCOME_TRACE("welcome-path: sendwelcome complete");
 }
 
 void forcedeath(client *cl)
@@ -3165,57 +3111,41 @@ void polldeferredprocessing()
     extern void iosstartup_log(const char *message);
     static int ios_deferred_trace_count = 0;
     bool ios_deferred_trace = ios_deferred_trace_count++ < 8;
-#define IOS_DEFERRED_TRACE(message) do { if(ios_deferred_trace) iosstartup_log(message); } while(0)
 #else
-#define IOS_DEFERRED_TRACE(message) do { } while(0)
 #endif
-    IOS_DEFERRED_TRACE("deferred: entered");
     static void *deferredprocessingthread_ti = NULL;
     if(!deferredprocessingthread_ti)
     {
-        IOS_DEFERRED_TRACE("deferred: before thread creation");
         deferredprocessingthread_ti = sl_createthread(deferredprocessingthread, NULL);
-        IOS_DEFERRED_TRACE("deferred: after thread creation");
     }
 
-    IOS_DEFERRED_TRACE("deferred: before auth completion check");
     if(servinfoauth_done)
     {
         servinfoauth *sa = (servinfoauth *)servinfoauth_dropbox;
-        IOS_DEFERRED_TRACE("deferred: completion flag set");
         servinfoauth_done = false;
         if(!sa)
         {
-            IOS_DEFERRED_TRACE("deferred: ERROR null completion job");
         }
         else if(sa->cn < 0 || !clients.inrange(sa->cn) || !clients[sa->cn])
         {
-            IOS_DEFERRED_TRACE("deferred: ERROR completion client index invalid");
         }
         else
         {
-            IOS_DEFERRED_TRACE("deferred: completion job and client valid");
             switch(sa->type)
             {
                 case SV_SERVINFO_RESPONSE:
                 {
-                    IOS_DEFERRED_TRACE("deferred: handling server-info response");
                     if(clients[sa->cn]->clientsequence == sa->clientsequence)
                     {
-                        IOS_DEFERRED_TRACE("deferred: client sequence matches");
                         if(!sa->success)
                         {
-                            IOS_DEFERRED_TRACE("deferred: auth result failed; before disconnect");
                             disconnect_client(sa->cn, DISC_AUTH);
-                            IOS_DEFERRED_TRACE("deferred: disconnect returned");
                         }
                         else
                         {
-                            IOS_DEFERRED_TRACE("deferred: auth result succeeded");
                             client *cl = clients[sa->cn];
                             if(sa->wantauth)
                             {
-                                IOS_DEFERRED_TRACE("deferred: authenticated client path");
                                 memcpy(cl->pubkey.u, sa->clientpubkey, 32);
                                 memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
                                 bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
@@ -3233,41 +3163,28 @@ void polldeferredprocessing()
                                 cl->needsauth = true;
                                 int datecodes = 0, *vs = cl->vita->vs;
                                 loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
-                                IOS_DEFERRED_TRACE("deferred: before authenticated continuation send");
                                 sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
-                                IOS_DEFERRED_TRACE("deferred: authenticated continuation send returned");
                             }
                             else
                             {
-                                IOS_DEFERRED_TRACE("deferred: before unauthenticated continuation packet construction");
                                 packetbuf continuation(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
-                                IOS_DEFERRED_TRACE("deferred: continuation packet buffer allocated");
                                 putint(continuation, SV_SERVINFO_CONTD);
                                 putint(continuation, 0);
-                                IOS_DEFERRED_TRACE("deferred: continuation packet fields encoded");
                                 ENetPacket *continuationpacket = continuation.finalize();
-                                IOS_DEFERRED_TRACE("deferred: continuation packet finalized");
-                                IOS_PACKET_TRACE("deferred: immediately before continuation sendpacket");
                                 sendpacket(sa->cn, 1, continuationpacket);
-                                IOS_PACKET_TRACE("deferred: continuation sendpacket call returned");
-                                IOS_DEFERRED_TRACE("deferred: continuation sendpacket returned");
                             }
                         }
                     }
-                    else IOS_DEFERRED_TRACE("deferred: stale client sequence; discarding result");
                     break;
                 }
                 default:
-                    IOS_DEFERRED_TRACE("deferred: ERROR unknown completion job type");
                     break;
             }
         }
         if(sa) delete sa;
         servinfoauth_dropbox = NULL;
     }
-    IOS_DEFERRED_TRACE("deferred: auth completion handled");
     if(!servinfoauths.empty() && servinfoauth_deferred.getvalue() < 1) servinfoauth_deferred.post();
-    IOS_DEFERRED_TRACE("deferred: queue check complete");
 #undef IOS_DEFERRED_TRACE
 }
 
@@ -3278,7 +3195,6 @@ SERVPARLIST(auth_verify_ip, 0, 0, 0, endis, "sVerify server IP reported by the c
 
 void process(ENetPacket *packet, int sender, int chan)
 {
-    IOS_SERVER_TRACE("server-path: process entered");
     ucharbuf p(packet->data, packet->dataLength);
     char text[MAXTRANS];
     client *cl = sender>=0 ? clients[sender] : NULL;
@@ -3328,10 +3244,8 @@ void process(ENetPacket *packet, int sender, int chan)
         }
         else
         { // SV_CONNECT
-            IOS_SERVER_TRACE("server-path: SV_CONNECT branch entered");
             cl->acversion = getint(p);
             cl->acbuildtype = getint(p);
-            IOS_SERVER_TRACE("server-path: version fields decoded");
             defformatstring(tags)(", AC: %d|%x", cl->acversion, cl->acbuildtype);
             getstring(text, p);
             filtertext(text, text, FTXT__PLAYERNAME, MAXNAMELEN);
@@ -3339,7 +3253,6 @@ void process(ENetPacket *packet, int sender, int chan)
             copystring(cl->name, text, MAXNAMELEN+1);
             getstring(text, p);
             copystring(cl->pwd, text);
-            IOS_SERVER_TRACE("server-path: player name and password decoded");
             getstring(text, p);
             filterlang(cl->lang, text);
             int wantrole = getint(p), np = getint(p);
@@ -3349,26 +3262,19 @@ void process(ENetPacket *packet, int sender, int chan)
             cl->maxrolleffect = getint(p);
             cl->ffov = getint(p);
             cl->scopefov = getint(p);
-            IOS_SERVER_TRACE("server-path: all SV_CONNECT fields decoded");
             int bantype = getbantype(sender);
-            IOS_SERVER_TRACE("server-path: getbantype returned");
             bool banned = bantype > BAN_NONE;
             bool srvfull = numnonlocalclients() > scl.maxclients;
-            IOS_SERVER_TRACE("server-path: client count checked");
             bool srvprivate = sg->mastermode == MM_PRIVATE || sg->mastermode == MM_MATCH;
             bool matchreconnect = sg->mastermode == MM_MATCH && findscore(*cl, false);
             if (cl->pubkeyhex[0]) {
                 concatformatstring(tags, ", pubkey: %s", cl->pubkeyhex);
             }
-            IOS_SERVER_TRACE("server-path: before nickname whitelist");
             int bl = 0, wl = nickblacklist.checkwhitelist(*cl);
-            IOS_SERVER_TRACE("server-path: nickname whitelist returned");
             if(wl == NWL_PASS) concatstring(tags, ", nickname whitelist match");
             if(wl == NWL_UNLISTED) bl = nickblacklist.checkblacklist(cl->name);
 
-            IOS_SERVER_TRACE("server-path: before vita whitelist");
             bool vitawhitelist = cl->checkvitadate(VS_WHITELISTED);
-            IOS_SERVER_TRACE("server-path: vita whitelist returned");
             if (vitawhitelist) {
                 concatstring(tags, ", vita whitelist match");
                 banned = false;
@@ -3443,7 +3349,6 @@ void process(ENetPacket *packet, int sender, int chan)
                 mlog(ACLOG_INFO, "[%s] %s logged in (default)%s", cl->hostname, cl->name, tags);
             }
         }
-        IOS_SERVER_TRACE("server-path: authentication decision complete");
         if(!cl->isauthed) return;
 
         if(cl->type==ST_TCPIP)
@@ -3456,16 +3361,11 @@ void process(ENetPacket *packet, int sender, int chan)
             }
         }
 
-        IOS_SERVER_TRACE("server-path: before vita and welcome");
         if(cl->vita) cl->vita->addname(cl->name);
-        IOS_SERVER_TRACE("server-path: before sendwelcome");
         sendwelcome(cl);
-        IOS_SERVER_TRACE("server-path: sendwelcome returned");
         if(restorescore(*cl)) { sendresume(*cl, true); senddisconnectedscores(-1); }
         else if(cl->type==ST_TCPIP) senddisconnectedscores(sender);
-        IOS_SERVER_TRACE("server-path: before sendinitclient");
         sendinitclient(*cl);
-        IOS_SERVER_TRACE("server-path: sendinitclient returned");
         if(clientrole != CR_DEFAULT) changeclientrole(sender, clientrole, NULL, true);
         if( curvote && curvote->result == VOTE_NEUTRAL ) callvotepacket (cl->clientnum);
 
@@ -4505,10 +4405,7 @@ void process(ENetPacket *packet, int sender, int chan)
 
 void localclienttoserver(int chan, ENetPacket *packet)
 {
-    IOS_SERVER_TRACE("server-path: localclienttoserver entered");
-    IOS_SERVER_TRACE("server-path: before process");
     process(packet, 0, chan);
-    IOS_SERVER_TRACE("server-path: process returned");
 }
 
 client &addclient()
@@ -4692,11 +4589,8 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     extern void iosstartup_log(const char *message);
     static int ios_server_trace_count = 0;
     bool ios_server_trace = ios_server_trace_count++ < 8;
-#define IOS_SERVER_TRACE(message) do { if(ios_server_trace) iosstartup_log(message); } while(0)
 #else
-#define IOS_SERVER_TRACE(message) do { } while(0)
 #endif
-    IOS_SERVER_TRACE("server: entered serverslice");
     static int msend = 0, mrec = 0, csend = 0, crec = 0, mnum = 0, cnum = 0;
 #ifdef STANDALONE
     int nextmillis = (int)enet_time_get();
@@ -4704,12 +4598,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
 #else
     int nextmillis = isdedicated ? (int)enet_time_get() : lastmillis;
 #endif
-    IOS_SERVER_TRACE("server: clock values calculated");
     int diff = nextmillis - servmillis;
     if(!sg->sispaused) sg->gamemillis += diff;
     servmillis = nextmillis;
     entropy_add_byte(diff);
-    IOS_SERVER_TRACE("server: time and entropy updated");
 
 #ifndef STANDALONE
     if(m_demo)
@@ -4722,11 +4614,8 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
 
     if(sg->minremain > 0 && !sg->sispaused)
     {
-        IOS_SERVER_TRACE("server: before processevents");
         processevents();
-        IOS_SERVER_TRACE("server: processevents complete");
         checkitemspawns(diff);
-        IOS_SERVER_TRACE("server: item spawns complete");
         bool ktfflagingame = false;
         if(m_flags_) loopi(2)
         {
@@ -4742,12 +4631,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
             }
             if(f.state == CTFF_INBASE || f.state == CTFF_STOLEN) ktfflagingame = true;
         }
-        IOS_SERVER_TRACE("server: flag processing complete");
         if(m_ktf && !ktfflagingame) flagaction(rnd(2), FA_RESET, -1); // ktf flag watchdog
         if(m_arena) arenacheck();
         else if(m_autospawn) autospawncheck();
         if(scl.afk_limit && sg->mastermode == MM_OPEN && next_afk_check < servmillis && sg->gamemillis > 20 * 1000) check_afk();
-        IOS_SERVER_TRACE("server: game-mode checks complete");
     }
 
     if(curvote)
@@ -4756,9 +4643,7 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         if(curvote->result!=VOTE_NEUTRAL) DELETEP(curvote);
     }
 
-    IOS_SERVER_TRACE("server: vote processing complete");
     int nonlocalclients = numnonlocalclients();
-    IOS_SERVER_TRACE("server: nonlocal client count complete");
     if(sg->forceintermission || ((sg->smode != GMODE_DEMO && sg->smode != GMODE_COOPEDIT) && sg->gamemillis-diff > 0 && sg->gamemillis / 60000 != (sg->gamemillis - diff) / 60000))
         checkintermission();
     if(m_demo && !demoplayback) maprot.restart();
@@ -4775,17 +4660,11 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         map_queued = false;
     }
 
-    IOS_SERVER_TRACE("server: before resetserverifempty");
     resetserverifempty();
-    IOS_SERVER_TRACE("server: resetserverifempty complete");
     polldeferredprocessing();
-    IOS_SERVER_TRACE("server: deferred processing complete");
     checkdemotransmissions();
-    IOS_SERVER_TRACE("server: demo transmissions complete");
 
-    IOS_SERVER_TRACE("server: before dedicated-server early return");
     if(!isdedicated) {
-        IOS_SERVER_TRACE("server: returning for non-dedicated client");
         return;
     }
 
@@ -4883,7 +4762,6 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         }
     }
     sendworldstate();
-    IOS_SERVER_TRACE("server: sendworldstate complete");
 #undef IOS_SERVER_TRACE
 }
 
