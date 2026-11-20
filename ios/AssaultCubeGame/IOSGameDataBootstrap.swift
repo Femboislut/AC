@@ -156,7 +156,7 @@ public func ac_ios_ensure_game_data() -> Int32 {
     // Use Foundation's authoritative sandbox home path for the C++ --home
     // argument. This is stable across app launches and follows container moves.
     let home = NSHomeDirectory()
-    setenv("HOME", home, 1)
+    home.withCString { homePath in _ = setenv("HOME", homePath, 1) }
     let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     let profile = documents.appendingPathComponent("Profile", isDirectory: true)
     do {
