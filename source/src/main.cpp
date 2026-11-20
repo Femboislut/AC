@@ -733,6 +733,9 @@ void resetgl()
     uniformtexres = !hirestextures;
     c2skeepalive();
 
+#if defined(AC_PLATFORM_IOS)
+static void ioskeyboardoverlayupdate();
+#endif
     int useddepthbits = 0, usedfsaa = 0;
     iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
