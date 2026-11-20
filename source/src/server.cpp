@@ -2,6 +2,13 @@
 // runs dedicated or as client coroutine
 
 #include "cube.h"
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#define IOS_SERVER_TRACE(message) iosstartup_log(message)
+#else
+#define IOS_SERVER_TRACE(message) do { } while(0)
+#endif
+
 
 #ifdef STANDALONE
 #define DEBUGCOND (true)
@@ -3232,6 +3239,7 @@ SERVPARLIST(auth_verify_ip, 0, 0, 0, endis, "sVerify server IP reported by the c
 
 void process(ENetPacket *packet, int sender, int chan)
 {
+    IOS_SERVER_TRACE("server-path: process entered");
     ucharbuf p(packet->data, packet->dataLength);
     char text[MAXTRANS];
     client *cl = sender>=0 ? clients[sender] : NULL;
@@ -3281,8 +3289,10 @@ void process(ENetPacket *packet, int sender, int chan)
         }
         else
         { // SV_CONNECT
+            IOS_SERVER_TRACE("server-path: SV_CONNECT branch entered");
             cl->acversion = getint(p);
             cl->acbuildtype = getint(p);
+            IOS_SERVER_TRACE("server-path: version fields decoded");
             defformatstring(tags)(", AC: %d|%x", cl->acversion, cl->acbuildtype);
             getstring(text, p);
             filtertext(text, text, FTXT__PLAYERNAME, MAXNAMELEN);
@@ -3290,6 +3300,7 @@ void process(ENetPacket *packet, int sender, int chan)
             copystring(cl->name, text, MAXNAMELEN+1);
             getstring(text, p);
             copystring(cl->pwd, text);
+            IOS_SERVER_TRACE("server-path: player name and password decoded");
             getstring(text, p);
             filterlang(cl->lang, text);
             int wantrole = getint(p), np = getint(p);
@@ -3299,19 +3310,26 @@ void process(ENetPacket *packet, int sender, int chan)
             cl->maxrolleffect = getint(p);
             cl->ffov = getint(p);
             cl->scopefov = getint(p);
+            IOS_SERVER_TRACE("server-path: all SV_CONNECT fields decoded");
             int bantype = getbantype(sender);
+            IOS_SERVER_TRACE("server-path: getbantype returned");
             bool banned = bantype > BAN_NONE;
             bool srvfull = numnonlocalclients() > scl.maxclients;
+            IOS_SERVER_TRACE("server-path: client count checked");
             bool srvprivate = sg->mastermode == MM_PRIVATE || sg->mastermode == MM_MATCH;
             bool matchreconnect = sg->mastermode == MM_MATCH && findscore(*cl, false);
             if (cl->pubkeyhex[0]) {
                 concatformatstring(tags, ", pubkey: %s", cl->pubkeyhex);
             }
+            IOS_SERVER_TRACE("server-path: before nickname whitelist");
             int bl = 0, wl = nickblacklist.checkwhitelist(*cl);
+            IOS_SERVER_TRACE("server-path: nickname whitelist returned");
             if(wl == NWL_PASS) concatstring(tags, ", nickname whitelist match");
             if(wl == NWL_UNLISTED) bl = nickblacklist.checkblacklist(cl->name);
 
+            IOS_SERVER_TRACE("server-path: before vita whitelist");
             bool vitawhitelist = cl->checkvitadate(VS_WHITELISTED);
+            IOS_SERVER_TRACE("server-path: vita whitelist returned");
             if (vitawhitelist) {
                 concatstring(tags, ", vita whitelist match");
                 banned = false;
@@ -3386,6 +3404,7 @@ void process(ENetPacket *packet, int sender, int chan)
                 mlog(ACLOG_INFO, "[%s] %s logged in (default)%s", cl->hostname, cl->name, tags);
             }
         }
+        IOS_SERVER_TRACE("server-path: authentication decision complete");
         if(!cl->isauthed) return;
 
         if(cl->type==ST_TCPIP)
@@ -3398,11 +3417,16 @@ void process(ENetPacket *packet, int sender, int chan)
             }
         }
 
+        IOS_SERVER_TRACE("server-path: before vita and welcome");
         if(cl->vita) cl->vita->addname(cl->name);
+        IOS_SERVER_TRACE("server-path: before sendwelcome");
         sendwelcome(cl);
+        IOS_SERVER_TRACE("server-path: sendwelcome returned");
         if(restorescore(*cl)) { sendresume(*cl, true); senddisconnectedscores(-1); }
         else if(cl->type==ST_TCPIP) senddisconnectedscores(sender);
+        IOS_SERVER_TRACE("server-path: before sendinitclient");
         sendinitclient(*cl);
+        IOS_SERVER_TRACE("server-path: sendinitclient returned");
         if(clientrole != CR_DEFAULT) changeclientrole(sender, clientrole, NULL, true);
         if( curvote && curvote->result == VOTE_NEUTRAL ) callvotepacket (cl->clientnum);
 
@@ -4442,7 +4466,10 @@ void process(ENetPacket *packet, int sender, int chan)
 
 void localclienttoserver(int chan, ENetPacket *packet)
 {
+    IOS_SERVER_TRACE("server-path: localclienttoserver entered");
+    IOS_SERVER_TRACE("server-path: before process");
     process(packet, 0, chan);
+    IOS_SERVER_TRACE("server-path: process returned");
 }
 
 client &addclient()
