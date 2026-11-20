@@ -3102,45 +3102,65 @@ void polldeferredprocessing()
     if(servinfoauth_done)
     {
         servinfoauth *sa = (servinfoauth *)servinfoauth_dropbox;
+        IOS_DEFERRED_TRACE("deferred: completion flag set");
         servinfoauth_done = false;
-        switch(sa->type)
+        if(!sa)
         {
-            case SV_SERVINFO_RESPONSE:
+            IOS_DEFERRED_TRACE("deferred: ERROR null completion job");
+        }
+        else if(sa->cn < 0 || !clients.inrange(sa->cn) || !clients[sa->cn])
+        {
+            IOS_DEFERRED_TRACE("deferred: ERROR completion client index invalid");
+        }
+        else
+        {
+            IOS_DEFERRED_TRACE("deferred: completion job and client valid");
+            switch(sa->type)
             {
-                if(clients[sa->cn]->clientsequence == sa->clientsequence) // make sure, it's still the same client using that cn
+                case SV_SERVINFO_RESPONSE:
                 {
-                    if(!sa->success) disconnect_client(sa->cn, DISC_AUTH);
-                    else
-                    { // continue connecting
-                        client *cl = clients[sa->cn];
-                        if(sa->wantauth)
+                    IOS_DEFERRED_TRACE("deferred: handling server-info response");
+                    if(clients[sa->cn]->clientsequence == sa->clientsequence)
+                    {
+                        IOS_DEFERRED_TRACE("deferred: client sequence matches");
+                        if(!sa->success) disconnect_client(sa->cn, DISC_AUTH);
+                        else
                         {
-                            memcpy(cl->pubkey.u, sa->clientpubkey, 32);
-                            memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
-                            bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
-                            cl->vita = vitas.access(cl->pubkey);
-                            if(!cl->vita)
+                            client *cl = clients[sa->cn];
+                            if(sa->wantauth)
                             {
-                                vita_s v;
-                                memset(&v, 0, sizeof(v));
-                                cl->vita = &vitas.access(cl->pubkey, v);
-                                cl->vita->vs[VS_FIRSTLOGIN] = servclock;
+                                memcpy(cl->pubkey.u, sa->clientpubkey, 32);
+                                memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
+                                bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
+                                cl->vita = vitas.access(cl->pubkey);
+                                if(!cl->vita)
+                                {
+                                    vita_s v;
+                                    memset(&v, 0, sizeof(v));
+                                    cl->vita = &vitas.access(cl->pubkey, v);
+                                    cl->vita->vs[VS_FIRSTLOGIN] = servclock;
+                                }
+                                if(cl->country[0] != '-') cl->vita->addcc(cl->country);
+                                cl->vita->addip(cl->ip);
+                                cl->vita->vs[VS_LASTLOGIN] = servclock;
+                                cl->needsauth = true;
+                                int datecodes = 0, *vs = cl->vita->vs;
+                                loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
+                                sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
                             }
-                            if(cl->country[0] != '-') cl->vita->addcc(cl->country);
-                            cl->vita->addip(cl->ip);
-                            cl->vita->vs[VS_LASTLOGIN] = servclock;
-                            cl->needsauth = true; // may have been voluntary, but it's done
-                            int datecodes = 0, *vs = cl->vita->vs;
-                            loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
-                            sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
+                            else sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
                         }
-                        else sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
                     }
+                    else IOS_DEFERRED_TRACE("deferred: stale client sequence; discarding result");
+                    break;
                 }
-                break;
+                default:
+                    IOS_DEFERRED_TRACE("deferred: ERROR unknown completion job type");
+                    break;
             }
         }
-        delete sa;
+        if(sa) delete sa;
+        servinfoauth_dropbox = NULL;
     }
     IOS_DEFERRED_TRACE("deferred: auth completion handled");
     if(!servinfoauths.empty() && servinfoauth_deferred.getvalue() < 1) servinfoauth_deferred.post();
