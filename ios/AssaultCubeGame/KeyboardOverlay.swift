@@ -87,13 +87,21 @@ private final class ACKeyboardOverlayView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
 
     private func style(_ target: UIButton, titleSize: CGFloat) {
-        target.backgroundColor = UIColor.black.withAlphaComponent(0.72)
+        target.backgroundColor = UIColor(red: 0.075, green: 0.12, blue: 0.19, alpha: 0.90)
         target.setTitleColor(.white, for: .normal)
+        target.setTitleColor(UIColor.white.withAlphaComponent(0.68), for: .highlighted)
         target.titleLabel?.font = .systemFont(ofSize: titleSize, weight: .bold)
-        target.layer.cornerRadius = 12
+        target.layer.cornerRadius = 14
+        target.layer.cornerCurve = .continuous
         target.layer.borderWidth = 1
-        target.layer.borderColor = UIColor.white.withAlphaComponent(0.32).cgColor
+        target.layer.borderColor = UIColor.white.withAlphaComponent(0.38).cgColor
+        target.layer.shadowColor = UIColor.black.cgColor
+        target.layer.shadowOpacity = 0.28
+        target.layer.shadowRadius = 5
+        target.layer.shadowOffset = CGSize(width: 0, height: 2)
+        target.clipsToBounds = false
         target.isExclusiveTouch = false
+        target.adjustsImageWhenHighlighted = true
     }
 
     private func addKeyButton(_ title: String, key: Int, size: CGFloat) {
@@ -101,6 +109,13 @@ private final class ACKeyboardOverlayView: UIView {
         style(control, titleSize: 11)
         control.setTitle(title, for: .normal)
         control.layer.cornerRadius = size / 2
+        control.layer.borderColor = UIColor.white.withAlphaComponent(0.42).cgColor
+        switch title {
+        case "FIRE": control.backgroundColor = UIColor.systemRed.withAlphaComponent(0.82)
+        case "JUMP", "CROUCH": control.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.78)
+        case "RELOAD", "NADE": control.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.78)
+        default: control.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.72)
+        }
         control.tag = key
         control.addTarget(self, action: #selector(controlDown(_:)), for: .touchDown)
         for event: UIControl.Event in [.touchUpInside, .touchUpOutside, .touchCancel] {
@@ -115,6 +130,11 @@ private final class ACKeyboardOverlayView: UIView {
         let control = UIButton(type: .system)
         style(control, titleSize: 13)
         control.setTitle(title, for: .normal)
+        control.layer.cornerRadius = 15
+        control.backgroundColor = title == "OK"
+            ? UIColor.systemGreen.withAlphaComponent(0.82)
+            : (title == "BACK" ? UIColor.systemRed.withAlphaComponent(0.78)
+                               : UIColor(red: 0.10, green: 0.25, blue: 0.40, alpha: 0.88))
         control.tag = key
         control.addTarget(self, action: #selector(controlDown(_:)), for: .touchDown)
         for event: UIControl.Event in [.touchUpInside, .touchUpOutside, .touchCancel] {
