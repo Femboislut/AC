@@ -2775,6 +2775,7 @@ void changeclientrole(int client, int role, char *pwd, bool force)
         if(role > CR_DEFAULT) sendiplist(client);
     }
     else if(pwd && pwd[0]) disconnect_client(client, DISC_SOPLOGINFAIL); // avoid brute-force
+    IOS_SERVER_TRACE("server: before vote processing");
     if(curvote) curvote->evaluate();
 }
 
@@ -4527,6 +4528,13 @@ SERVPARLIST(mandatory_auth, 0, 1, 0, endis, "sEnforce IDs for all clients even o
 
 void serverslice(uint timeout)   // main server update, called from cube main loop in sp, or dedicated server loop
 {
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    static int ios_server_trace_count = 0;
+    bool ios_server_trace = ios_server_trace_count++ < 8;
+#define IOS_SERVER_TRACE(message) do { if(ios_server_trace) iosstartup_log(message); } while(0)
+    IOS_SERVER_TRACE("server: entered serverslice");
+#endif
     static int msend = 0, mrec = 0, csend = 0, crec = 0, mnum = 0, cnum = 0;
 #ifdef STANDALONE
     int nextmillis = (int)enet_time_get();
@@ -4534,10 +4542,14 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
 #else
     int nextmillis = isdedicated ? (int)enet_time_get() : lastmillis;
 #endif
+    IOS_SERVER_TRACE("server: clock values calculated");
+#endif
     int diff = nextmillis - servmillis;
     if(!sg->sispaused) sg->gamemillis += diff;
     servmillis = nextmillis;
     entropy_add_byte(diff);
+#if defined(AC_PLATFORM_IOS)
+    IOS_SERVER_TRACE("server: time and entropy updated");
 
 #ifndef STANDALONE
     if(m_demo)
@@ -4550,8 +4562,11 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
 
     if(sg->minremain > 0 && !sg->sispaused)
     {
+        IOS_SERVER_TRACE("server: before processevents");
         processevents();
+        IOS_SERVER_TRACE("server: processevents complete");
         checkitemspawns(diff);
+        IOS_SERVER_TRACE("server: item spawns complete");
         bool ktfflagingame = false;
         if(m_flags_) loopi(2)
         {
@@ -4567,10 +4582,12 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
             }
             if(f.state == CTFF_INBASE || f.state == CTFF_STOLEN) ktfflagingame = true;
         }
+        IOS_SERVER_TRACE("server: flag processing complete");
         if(m_ktf && !ktfflagingame) flagaction(rnd(2), FA_RESET, -1); // ktf flag watchdog
         if(m_arena) arenacheck();
         else if(m_autospawn) autospawncheck();
         if(scl.afk_limit && sg->mastermode == MM_OPEN && next_afk_check < servmillis && sg->gamemillis > 20 * 1000) check_afk();
+        IOS_SERVER_TRACE("server: game-mode checks complete");
     }
 
     if(curvote)
@@ -4579,7 +4596,9 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         if(curvote->result!=VOTE_NEUTRAL) DELETEP(curvote);
     }
 
+    IOS_SERVER_TRACE("server: vote processing complete");
     int nonlocalclients = numnonlocalclients();
+    IOS_SERVER_TRACE("server: nonlocal client count complete");
     if(sg->forceintermission || ((sg->smode != GMODE_DEMO && sg->smode != GMODE_COOPEDIT) && sg->gamemillis-diff > 0 && sg->gamemillis / 60000 != (sg->gamemillis - diff) / 60000))
         checkintermission();
     if(m_demo && !demoplayback) maprot.restart();
@@ -4596,11 +4615,23 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         map_queued = false;
     }
 
+    IOS_SERVER_TRACE("server: before resetserverifempty");
     resetserverifempty();
+    IOS_SERVER_TRACE("server: resetserverifempty complete");
     polldeferredprocessing();
+    IOS_SERVER_TRACE("server: deferred processing complete");
     checkdemotransmissions();
+    IOS_SERVER_TRACE("server: demo transmissions complete");
 
-    if(!isdedicated) return;     // below is network only
+    IOS_SERVER_TRACE("server: before dedicated-server early return");
+    if(!isdedicated) {
+        IOS_SERVER_TRACE("server: returning for non-dedicated client");
+#if defined(AC_PLATFORM_IOS)
+#undef IOS_SERVER_TRACE
+#endif
+        return;
+    }
+
 
     poll_serverthreads(); // read config and map files in the background, process the results in the main thread
 
@@ -4695,6 +4726,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         }
     }
     sendworldstate();
+#if defined(AC_PLATFORM_IOS)
+    IOS_SERVER_TRACE("server: sendworldstate complete");
+#undef IOS_SERVER_TRACE
+#endif
 }
 
 void cleanupserver()
