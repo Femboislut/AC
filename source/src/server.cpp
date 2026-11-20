@@ -430,12 +430,18 @@ void cleanworldstate(ENetPacket *packet)
 
 void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacket)
 {
+    mlog(ACLOG_INFO, "sendpacket: entered n=%d chan=%d packet=%p", n, chan, (void *)packet);
+    if(!packet) { mlog(ACLOG_INFO, "sendpacket: NULL packet"); return; }
+    mlog(ACLOG_INFO, "sendpacket: packet data=%p len=%u", (void *)packet->data, (unsigned)packet->dataLength);
     if(n<0)
     {
         recordpacket(chan, packet->data, (int)packet->dataLength);
         loopv(clients) if(i!=exclude && (clients[i]->type!=ST_TCPIP || clients[i]->isauthed)) sendpacket(i, chan, packet, -1, demopacket);
         return;
     }
+    if(n>=clients.length()) { mlog(ACLOG_INFO, "sendpacket: invalid client index n=%d clients=%d", n, clients.length()); enet_packet_destroy(packet); return; }
+    mlog(ACLOG_INFO, "sendpacket: client ptr=%p type=%d", (void *)clients[n], clients[n] ? clients[n]->type : -1);
+    if(!clients[n]) { mlog(ACLOG_INFO, "sendpacket: NULL client slot"); enet_packet_destroy(packet); return; }
     switch(clients[n]->type)
     {
         case ST_TCPIP:
@@ -445,7 +451,11 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
         }
 
         case ST_LOCAL:
+            mlog(ACLOG_INFO, "sendpacket: before local dispatch");
             localservertoclient(chan, packet->data, (int)packet->dataLength, demopacket);
+            mlog(ACLOG_INFO, "sendpacket: local dispatch returned");
+            enet_packet_destroy(packet);
+            mlog(ACLOG_INFO, "sendpacket: local packet destroyed");
             break;
     }
 }
