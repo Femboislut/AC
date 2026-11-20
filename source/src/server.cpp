@@ -439,9 +439,9 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
         loopv(clients) if(i!=exclude && (clients[i]->type!=ST_TCPIP || clients[i]->isauthed)) sendpacket(i, chan, packet, -1, demopacket);
         return;
     }
-    if(n>=clients.length()) { mlog(ACLOG_INFO, "sendpacket: invalid client index n=%d clients=%d", n, clients.length()); enet_packet_destroy(packet); return; }
+    if(n>=clients.length()) { mlog(ACLOG_INFO, "sendpacket: invalid client index n=%d clients=%d", n, clients.length()); return; }
     mlog(ACLOG_INFO, "sendpacket: client ptr=%p type=%d", (void *)clients[n], clients[n] ? clients[n]->type : -1);
-    if(!clients[n]) { mlog(ACLOG_INFO, "sendpacket: NULL client slot"); enet_packet_destroy(packet); return; }
+    if(!clients[n]) { mlog(ACLOG_INFO, "sendpacket: NULL client slot"); return; }
     switch(clients[n]->type)
     {
         case ST_TCPIP:
@@ -454,8 +454,6 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
             mlog(ACLOG_INFO, "sendpacket: before local dispatch");
             localservertoclient(chan, packet->data, (int)packet->dataLength, demopacket);
             mlog(ACLOG_INFO, "sendpacket: local dispatch returned");
-            enet_packet_destroy(packet);
-            mlog(ACLOG_INFO, "sendpacket: local packet destroyed");
             break;
     }
 }
