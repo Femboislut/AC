@@ -1299,6 +1299,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 
 void initclientlog()  // rotate old logfiles and create new one
 {
+#if defined(AC_PLATFORM_IOS)
+    // Do not persist client diagnostics on iOS; avoid growing Documents storage.
+    clientlogfile = NULL;
+    DELETEP(bootclientlog);
+#else
     filerotate("clientlog", "txt", 5); // keep five old logfiles
     clientlogfile = openfile("clientlog.txt", "w");
     if(clientlogfile)
@@ -1307,6 +1312,7 @@ void initclientlog()  // rotate old logfiles and create new one
     }
     else conoutf("could not create logfile \"%s\"", findfile("clientlog.txt", "w"));
     DELETEP(bootclientlog);
+#endif
 }
 
 #ifdef _DEBUG
