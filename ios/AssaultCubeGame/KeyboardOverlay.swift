@@ -273,11 +273,11 @@ private final class ACKeyboardOverlayView: UIView {
 
 private enum ACKeyboardOverlay {
     static var overlay: ACKeyboardOverlayView?
-    private(set) static var menuMode = true
-    private(set) static var hudEnabled = true
-    private(set) static var hudScale: CGFloat = 1
-    private(set) static var gyroEnabled = false
-    private(set) static var gyroSensitivity: Double = 1
+    static var menuMode = true
+    static var hudEnabled = true
+    static var hudScale: CGFloat = 1
+    static var gyroEnabled = false
+    static var gyroSensitivity: Double = 1
 
     static func update(enabled: Bool, inputActive: Bool, visible: Bool,
                        x: CGFloat, y: CGFloat, size: CGFloat) {
