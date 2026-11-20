@@ -84,6 +84,11 @@ private final class ACKeyboardOverlayView: UIView {
         acEngineToggleInputMode()
     }
 
+    func setMenuMode(_ enabled: Bool) {
+        menuMode = enabled
+        refreshTitle()
+    }
+
     func refreshTitle() {
         button.setTitle(keyboardVisible ? "⌨ Hide" : "⌨ Show", for: .normal)
         button.accessibilityLabel = keyboardVisible ? "Hide keyboard" : "Show keyboard"
@@ -132,8 +137,7 @@ private enum ACKeyboardOverlay {
 @_cdecl("ac_ios_input_mode_update")
 public func acIOSInputModeUpdate(_ menuMode: Int32) {
     ACKeyboardOverlay.menuMode = menuMode != 0
-    DispatchQueue.main.async { ACKeyboardOverlay.overlay?.configure(
-        x: 92, y: 7, size: 48, visible: false, menuMode: ACKeyboardOverlay.menuMode) }
+    DispatchQueue.main.async { ACKeyboardOverlay.overlay?.setMenuMode(ACKeyboardOverlay.menuMode) }
 }
 
 @_cdecl("ac_ios_keyboard_overlay_update")
