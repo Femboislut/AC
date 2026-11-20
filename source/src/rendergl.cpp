@@ -843,10 +843,13 @@ COMMAND(clearminimap, "");
 VARFP(minimapres, 7, 9, 10, clearminimap());
 void drawminimap(int w, int h)
 {
-    // The engine starts with an empty placeholder world before the imported
-    // map is installed. Rendering the minimap against that incomplete world
-    // can enter world-rendering code before its map structures are ready.
-    // Keep it dirty so it is generated normally once a real map is loaded.
+#if defined(AC_PLATFORM_IOS)
+    // The legacy minimap renderer performs a second full world render into an
+    // off-screen texture. On the iOS GLES/GL4ES path this can crash during the
+    // first frame even after the main world has been installed. Defer this
+    // optional feature on iOS; the main scene does not depend on the minimap.
+    return;
+#else
     if(!maploaded || !minimapdirty) return;
     int size = 1<<minimapres, sizelimit = min(hwtexsize, min(w, h));
     while(size > sizelimit) size /= 2;
@@ -931,6 +934,7 @@ void drawminimap(int w, int h)
     glDisable(GL_TEXTURE_2D);
     glViewport(0, 0, w, h);
     glClearDepth(1.0);
+#endif
 }
 
 void cleanupgl()
