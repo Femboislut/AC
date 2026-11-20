@@ -388,7 +388,9 @@ void parsemessages(int cn, playerent *d, ucharbuf &p, bool demo = false)
                     else clientlogf("server authenticated as %s", bin2hex(tmp, s->serverpubkey, 32));
                 }
                 player1->clientnum = s->cn;
+                mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD before sendintro; clientnum=%d player1=%p", s->cn, (void *)player1);
                 sendintro();
+                mlog(ACLOG_INFO, "client: SV_SERVINFO_CONTD sendintro returned");
                 break;
             }
 
