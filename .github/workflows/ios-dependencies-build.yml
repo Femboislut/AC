@@ -326,8 +326,35 @@ jobs:
           test -s "$APP_PATH/Assets.car"
           test -s "AssaultCube-iOS-Game.ipa"
           unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/Assets.car"
-          unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/menus_settings.cfg"
-          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/menus_settings.cfg | grep -F "iOS Touch Controls"
+          MENU_RESOURCE="$(unzip -Z1 AssaultCube-iOS-Game.ipa | grep -E '(^|/)menus_settings\\.cfg          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/Info.plist > build/game-Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/game-Info.plist | grep -Fx "net.cubers.assaultcube.ios"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" build/game-Info.plist | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" build/game-Info.plist | grep -Fx "AssaultCube"
+          test -s "$APP_PATH/Info.plist"
+          echo "Verified app bundle metadata and compiled asset catalog."
+      - name: Publish direct IPA release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-ipa-${{ github.run_number }}-${{ github.run_attempt }}
+          name: AssaultCube iOS build ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Direct IPA download for LiveContainer / compatible sideloading workflows.
+            This is the only installable IPA published by this workflow.
+            The IPA is not wrapped in a GitHub Actions artifact ZIP.
+          files: AssaultCube-iOS-Game.ipa
+      - name: Upload engine diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-engine-diagnostics
+          path: build/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+ | head -n 1)"
+          test -n "$MENU_RESOURCE"
+          unzip -p AssaultCube-iOS-Game.ipa "$MENU_RESOURCE" | grep -F "iOS Touch Controls"
           unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/Info.plist > build/game-Info.plist
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/game-Info.plist | grep -Fx "net.cubers.assaultcube.ios"
           /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" build/game-Info.plist | grep -Fx "AssaultCube"
