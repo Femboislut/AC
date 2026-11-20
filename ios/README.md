@@ -26,7 +26,7 @@ This extracts data only. The installer and Windows executables/DLLs are never ru
 
 ## Mobile input implementation in progress
 
-The iOS game target now has a native Aim/Menu switch, a virtual movement stick, fire/jump/crouch/reload/grenade/weapon shortcut buttons, adjustable HUD scale, and optional CoreMotion gyro aiming. These controls inject SDL input events so the existing AssaultCube key bindings and gameplay code remain authoritative. Menu mode is the default and avoids the engine's normal first-click-to-capture behavior. See [the touch-control implementation and validation notes](../docs/ios-mobile-controls.md).
+The iOS game target now has a native Aim/Menu switch, an on-screen menu navigation pad, a virtual movement stick, fire/jump/crouch/reload/grenade/weapon shortcuts, adjustable HUD scale, optional CoreMotion gyro aiming, and an iOS Touch Controls page in the original Settings menu. These controls inject SDL input events so the existing AssaultCube key bindings and gameplay code remain authoritative. Menu mode is the default and avoids the engine's normal first-click-to-capture behavior. See [the touch-control implementation and validation notes](../docs/ios-mobile-controls.md).
 
 The following remain planned or require further work:
 
@@ -35,20 +35,20 @@ The following remain planned or require further work:
 - Touch HUD: per-control dragging, opacity adjustment, individual button remapping, and saved custom layouts.
 - Gyroscope aiming: physical-device axis calibration, horizontal/vertical inversion and fine-grained mode options.
 - Bluetooth controller support: configurable mapping, dead zones and vibration where supported.
-- In-game settings pages: controls, gyro, graphics, FOV, crosshair, HUD, audio, gameplay and accessibility.
+- Additional iOS-specific settings pages for per-button positioning/remapping, opacity and saved layouts; the original game settings remain available.
 - Multiplayer UI improvements: server list refresh, favourites, ping, direct connect and reconnect.
 - Stable lifecycle: suspend/resume, safe config saving, and performance options.
 
 
 ## iOS keyboard toggle and diagnostics
 
-- A floating **⌨ Hide / Show** control stays near the top of the screen. It hides or reopens the iOS keyboard; when no text field is active, tapping it opens the engine command input.
+- A floating **⌨ Hide / Show** control stays near the top of the screen. It shows or hides the iOS keyboard for the active AssaultCube text-entry field; it does not create a console input field by itself.
 - Its saved config variables can be customized from the in-game console: `ioskeyboardbutton 1` enables it, `ioskeyboardx 92` and `ioskeyboardy 7` move it (0–100 percent), and `ioskeyboardsize 48` adjusts its size (32–80 points). Set `ioskeyboardbutton 0` to hide it.
 - iOS builds no longer write the persistent startup breadcrumb file or client diagnostic log. Existing `Documents/AssaultCubeStartup.log` is deleted on launch.
 
 ## Build workflow
 
-The [iOS ARM64 dependency build](../.github/workflows/ios-dependencies-build.yml) builds the pinned dependencies, engine, importer, smoke test, and game app.
+The [iOS ARM64 dependency build](../.github/workflows/ios-dependencies-build.yml) builds the pinned dependencies, engine, importer, smoke test, and game app. Its published IPA is marked prerelease until physical-device validation is complete.
 
 CI artifacts are temporary test outputs. Only a device-tested IPA should be promoted to a GitHub Release.
 
