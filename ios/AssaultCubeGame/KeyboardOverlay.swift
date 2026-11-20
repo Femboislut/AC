@@ -12,9 +12,11 @@ private func acEngineVirtualMouse(_ down: Int32)
 @_silgen_name("ac_ios_gyro_motion")
 private func acEngineGyroMotion(_ dx: Float, _ dy: Float)
 
-private final class ACKeyboardOverlayView: UIView {
+private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
     private let button = UIButton(type: .system)
     private let modeButton = UIButton(type: .system)
+    private let editButton = UIButton(type: .system)
+    private let resetLayoutButton = UIButton(type: .system)
     private let joystick = UIView()
     private let joystickKnob = UIView()
     private var controlButtons: [UIButton] = []
@@ -30,6 +32,10 @@ private final class ACKeyboardOverlayView: UIView {
     private var gyroEnabled = false
     private var gyroSensitivity: Double = 1
     private var pressedDirections: Set<Int32> = []
+    private var editingControls = false
+    private var joystickPan: UIPanGestureRecognizer!
+    private var dragStartCenter: CGPoint = .zero
+    private let layoutDefaultsKey = "assaultcube.touch.layout.v1"
 
     private let keyW: Int32 = 119
     private let keyA: Int32 = 97
@@ -51,6 +57,17 @@ private final class ACKeyboardOverlayView: UIView {
         modeButton.addTarget(self, action: #selector(toggleInputMode), for: .touchUpInside)
         addSubview(modeButton)
 
+        style(editButton, titleSize: 11)
+        editButton.setTitle("EDIT HUD", for: .normal)
+        editButton.addTarget(self, action: #selector(toggleEditingControls), for: .touchUpInside)
+        addSubview(editButton)
+
+        style(resetLayoutButton, titleSize: 11)
+        resetLayoutButton.setTitle("RESET", for: .normal)
+        resetLayoutButton.addTarget(self, action: #selector(resetControlLayout), for: .touchUpInside)
+        resetLayoutButton.isHidden = true
+        addSubview(resetLayoutButton)
+
         joystick.backgroundColor = UIColor.black.withAlphaComponent(0.28)
         joystick.layer.borderColor = UIColor.white.withAlphaComponent(0.55).cgColor
         joystick.layer.borderWidth = 2
@@ -65,9 +82,14 @@ private final class ACKeyboardOverlayView: UIView {
         joystickKnob.isUserInteractionEnabled = false
         joystick.addSubview(joystickKnob)
 
-        let pan = UIPanGestureRecognizer(target: self, action: #selector(handleJoystickPan(_:)))
-        pan.maximumNumberOfTouches = 1
-        joystick.addGestureRecognizer(pan)
+        joystickPan = UIPanGestureRecognizer(target: self, action: #selector(handleJoystickPan(_:)))
+        joystickPan.maximumNumberOfTouches = 1
+        joystickPan.delegate = self
+        joystick.addGestureRecognizer(joystickPan)
+        let joystickDrag = UIPanGestureRecognizer(target: self, action: #selector(handleControlDrag(_:)))
+        joystickDrag.delegate = self
+        joystickDrag.cancelsTouchesInView = true
+        joystick.addGestureRecognizer(joystickDrag)
 
         addKeyButton("FIRE", key: -1, size: 70)
         addKeyButton("JUMP", key: 32, size: 54)
@@ -89,18 +111,20 @@ private final class ACKeyboardOverlayView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
 
     private func style(_ target: UIButton, titleSize: CGFloat) {
-        target.backgroundColor = UIColor(red: 0.075, green: 0.12, blue: 0.19, alpha: 0.90)
+        target.backgroundColor = UIColor(red: 0.055, green: 0.085, blue: 0.14, alpha: 0.62)
         target.setTitleColor(.white, for: .normal)
-        target.setTitleColor(UIColor.white.withAlphaComponent(0.68), for: .highlighted)
+        target.setTitleColor(UIColor.white.withAlphaComponent(0.72), for: .highlighted)
         target.titleLabel?.font = .systemFont(ofSize: titleSize, weight: .bold)
+        target.titleLabel?.adjustsFontSizeToFitWidth = true
+        target.titleLabel?.minimumScaleFactor = 0.72
         target.layer.cornerRadius = 14
         target.layer.cornerCurve = .continuous
-        target.layer.borderWidth = 1
-        target.layer.borderColor = UIColor.white.withAlphaComponent(0.38).cgColor
-        target.layer.shadowColor = UIColor.black.cgColor
-        target.layer.shadowOpacity = 0.28
-        target.layer.shadowRadius = 5
-        target.layer.shadowOffset = CGSize(width: 0, height: 2)
+        target.layer.borderWidth = 1.8
+        target.layer.borderColor = UIColor.white.withAlphaComponent(0.55).cgColor
+        target.layer.shadowColor = UIColor(red: 0.58, green: 0.83, blue: 0.96, alpha: 1).cgColor
+        target.layer.shadowOpacity = 0.20
+        target.layer.shadowRadius = 7
+        target.layer.shadowOffset = CGSize(width: 0, height: 1)
         target.clipsToBounds = false
         target.isExclusiveTouch = false
         target.isMultipleTouchEnabled = true
@@ -112,14 +136,26 @@ private final class ACKeyboardOverlayView: UIView {
         style(control, titleSize: 11)
         control.setTitle(title, for: .normal)
         control.layer.cornerRadius = size / 2
-        control.layer.borderColor = UIColor.white.withAlphaComponent(0.42).cgColor
+        let accent: UIColor
         switch title {
-        case "FIRE": control.backgroundColor = UIColor.systemRed.withAlphaComponent(0.82)
-        case "JUMP", "CROUCH": control.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.78)
-        case "RELOAD", "NADE": control.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.78)
-        default: control.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.72)
+        case "FIRE": accent = UIColor(red: 1.00, green: 0.66, blue: 0.76, alpha: 1)       // pastel rose
+        case "JUMP": accent = UIColor(red: 0.65, green: 0.91, blue: 0.79, alpha: 1)       // mint
+        case "CROUCH": accent = UIColor(red: 0.82, green: 0.72, blue: 0.96, alpha: 1)     // lavender
+        case "RELOAD": accent = UIColor(red: 0.55, green: 0.88, blue: 0.91, alpha: 1)     // cyan
+        case "NADE": accent = UIColor(red: 0.72, green: 0.78, blue: 1.00, alpha: 1)       // periwinkle
+        case "PREV": accent = UIColor(red: 0.64, green: 0.79, blue: 1.00, alpha: 1)       // blue
+        default: accent = UIColor(red: 0.70, green: 0.91, blue: 0.84, alpha: 1)
         }
+        control.layer.borderColor = accent.cgColor
+        control.layer.shadowColor = accent.cgColor
+        control.layer.shadowOpacity = 0.42
+        control.layer.shadowRadius = 8
         control.tag = key
+        control.accessibilityIdentifier = "ac.control.\(title.lowercased())"
+        let drag = UIPanGestureRecognizer(target: self, action: #selector(handleControlDrag(_:)))
+        drag.delegate = self
+        drag.cancelsTouchesInView = true
+        control.addGestureRecognizer(drag)
         control.addTarget(self, action: #selector(controlDown(_:)), for: .touchDown)
         for event: UIControl.Event in [.touchUpInside, .touchUpOutside, .touchCancel] {
             control.addTarget(self, action: #selector(controlUp(_:)), for: event)
@@ -134,10 +170,14 @@ private final class ACKeyboardOverlayView: UIView {
         style(control, titleSize: 13)
         control.setTitle(title, for: .normal)
         control.layer.cornerRadius = 15
-        control.backgroundColor = title == "OK"
-            ? UIColor.systemGreen.withAlphaComponent(0.82)
-            : (title == "BACK" ? UIColor.systemRed.withAlphaComponent(0.78)
-                               : UIColor(red: 0.10, green: 0.25, blue: 0.40, alpha: 0.88))
+        let accent = title == "OK"
+            ? UIColor(red: 0.65, green: 0.92, blue: 0.77, alpha: 1)
+            : (title == "BACK" ? UIColor(red: 1.00, green: 0.68, blue: 0.76, alpha: 1)
+                               : UIColor(red: 0.66, green: 0.83, blue: 1.00, alpha: 1))
+        control.layer.borderColor = accent.cgColor
+        control.layer.shadowColor = accent.cgColor
+        control.layer.shadowOpacity = 0.32
+        control.layer.shadowRadius = 7
         control.tag = key
         control.addTarget(self, action: #selector(controlDown(_:)), for: .touchDown)
         for event: UIControl.Event in [.touchUpInside, .touchUpOutside, .touchCancel] {
@@ -163,9 +203,12 @@ private final class ACKeyboardOverlayView: UIView {
 
     func setMenuMode(_ enabled: Bool) {
         menuMode = enabled
+        if enabled { setEditingControls(false) }
         joystick.isHidden = enabled || !hudEnabled
         controlButtons.forEach { $0.isHidden = enabled || !hudEnabled }
         menuButtons.forEach { $0.isHidden = !enabled }
+        editButton.isHidden = enabled || !hudEnabled
+        resetLayoutButton.isHidden = !editingControls || enabled || !hudEnabled
         if enabled { releaseAllDirections() }
         refreshGyroscope()
         refreshTitle()
@@ -184,6 +227,8 @@ private final class ACKeyboardOverlayView: UIView {
         let modeWidth = max(buttonSize * 1.85, 88)
         modeButton.frame = CGRect(x: max(margin, x - modeWidth - 8), y: y,
                                   width: modeWidth, height: height)
+        editButton.frame = CGRect(x: bounds.width - 112, y: 12, width: 100, height: 38)
+        resetLayoutButton.frame = CGRect(x: bounds.width - 218, y: 12, width: 96, height: 38)
 
         let scale = hudScale
         let joystickSize: CGFloat = 128 * scale
@@ -191,6 +236,7 @@ private final class ACKeyboardOverlayView: UIView {
                                 width: joystickSize, height: joystickSize)
         joystick.layer.cornerRadius = joystickSize / 2
         joystickKnob.frame = CGRect(x: 39 * scale, y: 39 * scale, width: 50 * scale, height: 50 * scale)
+        applySavedCenter(to: joystick, key: "joystick")
 
         let fire = controlButtons[0]
         let jump = controlButtons[1]
@@ -208,6 +254,9 @@ private final class ACKeyboardOverlayView: UIView {
         previous.frame = CGRect(x: bounds.width - 232 * scale, y: bounds.height - 76 * scale, width: 50 * scale, height: 50 * scale)
         primary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 142 * scale, width: 46 * scale, height: 46 * scale)
         secondary.frame = CGRect(x: bounds.width - 292 * scale, y: bounds.height - 82 * scale, width: 46 * scale, height: 46 * scale)
+        for control in controlButtons {
+            if let key = control.accessibilityIdentifier { applySavedCenter(to: control, key: key) }
+        }
 
         let menuSize: CGFloat = 50
         let menuGap: CGFloat = 7
@@ -222,7 +271,7 @@ private final class ACKeyboardOverlayView: UIView {
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard isUserInteractionEnabled, !isHidden, alpha > 0.01 else { return nil }
-        let candidates: [UIView] = [button, modeButton, joystick] + controlButtons.reversed().map { $0 as UIView } + menuButtons.reversed().map { $0 as UIView }
+        let candidates: [UIView] = [button, modeButton, editButton, resetLayoutButton, joystick] + controlButtons.reversed().map { $0 as UIView } + menuButtons.reversed().map { $0 as UIView }
         for view in candidates where !view.isHidden {
             let local = view.convert(point, from: self)
             if view.bounds.contains(local) {
@@ -235,12 +284,74 @@ private final class ACKeyboardOverlayView: UIView {
     @objc private func toggleKeyboard() { acEngineToggleKeyboard() }
     @objc private func toggleInputMode() { acEngineToggleInputMode() }
 
+    @objc private func toggleEditingControls() {
+        setEditingControls(!editingControls)
+    }
+
+    private func setEditingControls(_ enabled: Bool) {
+        editingControls = enabled
+        editButton.setTitle(enabled ? "DONE" : "EDIT HUD", for: .normal)
+        resetLayoutButton.isHidden = !enabled || menuMode || !hudEnabled
+        joystick.layer.borderColor = (enabled
+            ? UIColor(red: 0.65, green: 0.91, blue: 0.80, alpha: 1)
+            : UIColor.white.withAlphaComponent(0.55)).cgColor
+        joystick.layer.borderWidth = enabled ? 3 : 2
+        if enabled { releaseAllDirections() }
+    }
+
+    @objc private func resetControlLayout() {
+        UserDefaults.standard.removeObject(forKey: layoutDefaultsKey)
+        setNeedsLayout()
+    }
+
+    private func applySavedCenter(to view: UIView, key: String) {
+        guard bounds.width > 0, bounds.height > 0,
+              let layouts = UserDefaults.standard.dictionary(forKey: layoutDefaultsKey) as? [String: [Double]],
+              let position = layouts[key], position.count >= 2 else { return }
+        view.center = CGPoint(x: CGFloat(position[0]) * bounds.width,
+                              y: CGFloat(position[1]) * bounds.height)
+    }
+
+    private func saveCenter(of view: UIView, key: String) {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        var layouts = UserDefaults.standard.dictionary(forKey: layoutDefaultsKey) as? [String: [Double]] ?? [:]
+        layouts[key] = [Double(view.center.x / bounds.width), Double(view.center.y / bounds.height)]
+        UserDefaults.standard.set(layouts, forKey: layoutDefaultsKey)
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === joystickPan { return !editingControls }
+        return editingControls
+    }
+
+    @objc private func handleControlDrag(_ gesture: UIPanGestureRecognizer) {
+        guard editingControls, let target = gesture.view else { return }
+        switch gesture.state {
+        case .began:
+            dragStartCenter = target.center
+        case .changed:
+            let translation = gesture.translation(in: self)
+            let halfW = target.bounds.width / 2
+            let halfH = target.bounds.height / 2
+            target.center = CGPoint(
+                x: min(max(dragStartCenter.x + translation.x, halfW + 6), bounds.width - halfW - 6),
+                y: min(max(dragStartCenter.y + translation.y, halfH + 6), bounds.height - halfH - 6)
+            )
+        case .ended:
+            if target === joystick { saveCenter(of: joystick, key: "joystick") }
+            else if let key = target.accessibilityIdentifier { saveCenter(of: target, key: key) }
+        default: break
+        }
+    }
+
     @objc private func controlDown(_ sender: UIButton) {
+        guard !editingControls else { return }
         if sender.tag == -1 { acEngineVirtualMouse(1) }
         else { acEngineVirtualKey(Int32(sender.tag), 1) }
     }
 
     @objc private func controlUp(_ sender: UIButton) {
+        guard !editingControls else { return }
         if sender.tag == -1 { acEngineVirtualMouse(0) }
         else { acEngineVirtualKey(Int32(sender.tag), 0) }
     }
@@ -288,7 +399,8 @@ private final class ACKeyboardOverlayView: UIView {
         hudScale = min(max(scale, 0.6), 1.4)
         joystick.isHidden = menuMode || !hudEnabled
         controlButtons.forEach { $0.isHidden = menuMode || !hudEnabled }
-        if !hudEnabled { releaseAllDirections() }
+        editButton.isHidden = menuMode || !hudEnabled
+        if !hudEnabled { setEditingControls(false); releaseAllDirections() }
         setNeedsLayout()
     }
 
@@ -302,16 +414,32 @@ private final class ACKeyboardOverlayView: UIView {
         let shouldRun = gyroEnabled && !menuMode && motionManager.isGyroAvailable
         if shouldRun && !motionManager.isGyroActive {
             motionManager.gyroUpdateInterval = 1.0 / 60.0
+            var previousTimestamp: TimeInterval = 0
             motionManager.startGyroUpdates(to: .main) { [weak self] data, _ in
-                guard let self, !self.menuMode, let rate = data?.rotationRate else { return }
+                guard let self, !self.menuMode, !self.editingControls,
+                      let sample = data else { return }
+                let timestamp = sample.timestamp
+                let dt = previousTimestamp > 0 ? min(max(timestamp - previousTimestamp, 0.001), 0.05) : 0
+                previousTimestamp = timestamp
+                guard dt > 0 else { return }
+                let rate = sample.rotationRate
                 let orientation = UIApplication.shared.connectedScenes
                     .compactMap { $0 as? UIWindowScene }.first?.interfaceOrientation ?? .landscapeRight
                 var yaw = rate.y
                 var pitch = rate.x
-                if orientation == .landscapeRight { yaw = -rate.y; pitch = -rate.x }
-                else if orientation == .portrait { yaw = rate.z; pitch = rate.x }
-                let factor = self.gyroSensitivity * 600.0 / 60.0
-                acEngineGyroMotion(Float(yaw * factor), Float(pitch * factor))
+                switch orientation {
+                case .landscapeRight: yaw = -rate.y; pitch = -rate.x
+                case .landscapeLeft: yaw = rate.y; pitch = rate.x
+                case .portrait: yaw = rate.z; pitch = rate.x
+                case .portraitUpsideDown: yaw = -rate.z; pitch = -rate.x
+                default: break
+                }
+                // Integrate angular velocity over the sample interval. The old
+                // code treated rad/s as a per-frame delta, making gyro far too fast.
+                let factor = self.gyroSensitivity * 520.0 * dt
+                let dx = min(max(yaw * factor, -48), 48)
+                let dy = min(max(pitch * factor, -48), 48)
+                acEngineGyroMotion(Float(dx), Float(dy))
             }
         } else if !shouldRun && motionManager.isGyroActive {
             motionManager.stopGyroUpdates()
@@ -323,6 +451,7 @@ private final class ACKeyboardOverlayView: UIView {
         button.accessibilityLabel = keyboardVisible ? "Hide keyboard" : "Show keyboard"
         modeButton.setTitle(menuMode ? "🎮 Play" : "☰ Menu", for: .normal)
         modeButton.accessibilityLabel = menuMode ? "Show gameplay controls" : "Switch to menu navigation"
+        editButton.accessibilityLabel = editingControls ? "Finish moving controls" : "Move touch controls"
     }
 }
 
