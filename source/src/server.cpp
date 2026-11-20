@@ -4533,8 +4533,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     static int ios_server_trace_count = 0;
     bool ios_server_trace = ios_server_trace_count++ < 8;
 #define IOS_SERVER_TRACE(message) do { if(ios_server_trace) iosstartup_log(message); } while(0)
-    IOS_SERVER_TRACE("server: entered serverslice");
+#else
+#define IOS_SERVER_TRACE(message) do { } while(0)
 #endif
+    IOS_SERVER_TRACE("server: entered serverslice");
     static int msend = 0, mrec = 0, csend = 0, crec = 0, mnum = 0, cnum = 0;
 #ifdef STANDALONE
     int nextmillis = (int)enet_time_get();
@@ -4543,12 +4545,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     int nextmillis = isdedicated ? (int)enet_time_get() : lastmillis;
 #endif
     IOS_SERVER_TRACE("server: clock values calculated");
-#endif
     int diff = nextmillis - servmillis;
     if(!sg->sispaused) sg->gamemillis += diff;
     servmillis = nextmillis;
     entropy_add_byte(diff);
-#if defined(AC_PLATFORM_IOS)
     IOS_SERVER_TRACE("server: time and entropy updated");
 
 #ifndef STANDALONE
@@ -4626,9 +4626,7 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     IOS_SERVER_TRACE("server: before dedicated-server early return");
     if(!isdedicated) {
         IOS_SERVER_TRACE("server: returning for non-dedicated client");
-#if defined(AC_PLATFORM_IOS)
 #undef IOS_SERVER_TRACE
-#endif
         return;
     }
 
@@ -4726,10 +4724,8 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         }
     }
     sendworldstate();
-#if defined(AC_PLATFORM_IOS)
     IOS_SERVER_TRACE("server: sendworldstate complete");
 #undef IOS_SERVER_TRACE
-#endif
 }
 
 void cleanupserver()
