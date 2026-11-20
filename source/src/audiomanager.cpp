@@ -2,8 +2,8 @@
 
 #include "cube.h"
 #if defined(AC_PLATFORM_IOS)
-extern void iosstartup_log(const char *message);
-#define IOS_AUDIO_LOG(message) iosstartup_log(message)
+// iOS startup diagnostics are intentionally disabled; do not introduce a link dependency.
+#define IOS_AUDIO_LOG(message) ((void)0)
 #else
 #define IOS_AUDIO_LOG(message) ((void)0)
 #endif
