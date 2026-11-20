@@ -62,10 +62,19 @@ void gl_checkextensions()
     conoutf("Renderer: %s (%s)", renderer, vendor);
     conoutf("Driver: %s", version);
 
+    // GL4ES is the compatibility layer used on iOS. Match AssaultCube's
+    // proven Android mobile path and avoid optional desktop extension calls.
+    const bool gl4es =
+#if defined(__ANDROID__) || defined(AC_PLATFORM_IOS)
+        true;
+#else
+        false;
+#endif
+
     if(hasext(exts, "GL_EXT_texture_env_combine") || hasext(exts, "GL_ARB_texture_env_combine")) hasTE = true;
     else conoutf("WARNING: cannot use overbright lighting, using old lighting model!");
 
-    if(hasext(exts, "GL_ARB_multitexture"))
+    if(hasext(exts, "GL_ARB_multitexture") && !gl4es)
     {
         glActiveTexture_       = (PFNGLACTIVETEXTUREARBPROC)      getprocaddress("glActiveTextureARB");
         glClientActiveTexture_ = (PFNGLCLIENTACTIVETEXTUREARBPROC)getprocaddress("glClientActiveTextureARB");
@@ -78,7 +87,7 @@ void gl_checkextensions()
 #endif
     }
 
-    if(hasext(exts, "GL_EXT_multi_draw_arrays"))
+    if(hasext(exts, "GL_EXT_multi_draw_arrays") && !gl4es)
     {
         glMultiDrawArrays_   = (PFNGLMULTIDRAWARRAYSEXTPROC)  getprocaddress("glMultiDrawArraysEXT");
         glMultiDrawElements_ = (PFNGLMULTIDRAWELEMENTSEXTPROC)getprocaddress("glMultiDrawElementsEXT");
@@ -87,28 +96,28 @@ void gl_checkextensions()
         if(strstr(vendor, "ATI") || strstr(renderer, "Mesa") || strstr(version, "Mesa")) ati_mda_bug = 1;
     }
 
-    if(hasext(exts, "GL_EXT_draw_range_elements"))
+    if(hasext(exts, "GL_EXT_draw_range_elements") && !gl4es)
     {
         glDrawRangeElements_ = (PFNGLDRAWRANGEELEMENTSEXTPROC)getprocaddress("glDrawRangeElementsEXT");
         hasDRE = true;
     }
 
-    if(hasext(exts, "GL_EXT_stencil_two_side"))
+    if(hasext(exts, "GL_EXT_stencil_two_side") && !gl4es)
     {
         glActiveStencilFace_ = (PFNGLACTIVESTENCILFACEEXTPROC)getprocaddress("glActiveStencilFaceEXT");
         hasST2 = true;
     }
 
-    if(hasext(exts, "GL_ATI_separate_stencil"))
+    if(hasext(exts, "GL_ATI_separate_stencil") && !gl4es)
     {
         glStencilOpSeparate_   = (PFNGLSTENCILOPSEPARATEATIPROC)  getprocaddress("glStencilOpSeparateATI");
         glStencilFuncSeparate_ = (PFNGLSTENCILFUNCSEPARATEATIPROC)getprocaddress("glStencilFuncSeparateATI");
         hasSTS = true;
     }
 
-    if(hasext(exts, "GL_EXT_stencil_wrap")) hasSTW = true;
+    if(hasext(exts, "GL_EXT_stencil_wrap") && !gl4es) hasSTW = true;
 
-    if(hasext(exts, "GL_EXT_texture_filter_anisotropic"))
+    if(hasext(exts, "GL_EXT_texture_filter_anisotropic") && !gl4es)
     {
        GLint val;
        glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &val);
@@ -116,7 +125,7 @@ void gl_checkextensions()
        hasAF = true;
     }
 
-    if(!hasext(exts, "GL_ARB_fragment_program"))
+    if(!hasext(exts, "GL_ARB_fragment_program") && !gl4es)
     {
         // not a required extension, but ensures the card has enough power to do reflections
         extern int waterreflect, waterrefract;
