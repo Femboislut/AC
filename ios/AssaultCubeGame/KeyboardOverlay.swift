@@ -104,10 +104,11 @@ private final class ACKeyboardOverlayView: UIView {
         controlButtons.append(control)
     }
 
-    func configure(x: CGFloat, y: CGFloat, size: CGFloat, visible: Bool, menuMode: Bool, hudEnabled: Bool, hudScale: CGFloat) {
+    func configure(keyboardEnabled: Bool, x: CGFloat, y: CGFloat, size: CGFloat, visible: Bool, menuMode: Bool, hudEnabled: Bool, hudScale: CGFloat) {
         xPercent = min(max(x, 0), 100)
         yPercent = min(max(y, 0), 100)
         buttonSize = min(max(size, 32), 80)
+        button.isHidden = !keyboardEnabled
         keyboardVisible = visible
         self.hudEnabled = hudEnabled
         self.hudScale = min(max(hudScale, 0.6), 1.4)
@@ -243,7 +244,7 @@ private final class ACKeyboardOverlayView: UIView {
     }
 
     private func refreshGyroscope() {
-        let shouldRun = gyroEnabled && !menuMode && CMMotionManager().isGyroAvailable
+        let shouldRun = gyroEnabled && !menuMode && motionManager.isGyroAvailable
         if shouldRun && !motionManager.isGyroActive {
             motionManager.gyroUpdateInterval = 1.0 / 60.0
             motionManager.startGyroUpdates(to: .main) { [weak self] data, _ in
@@ -291,12 +292,6 @@ private enum ACKeyboardOverlay {
                 return
             }
 
-            guard enabled else {
-                overlay?.removeFromSuperview()
-                overlay = nil
-                return
-            }
-
             if overlay == nil || overlay?.superview !== root {
                 overlay?.removeFromSuperview()
                 let newOverlay = ACKeyboardOverlayView(frame: root.bounds)
@@ -304,8 +299,9 @@ private enum ACKeyboardOverlay {
                 overlay = newOverlay
             }
             overlay?.frame = root.bounds
-            overlay?.configure(x: x, y: y, size: size, visible: visible, menuMode: menuMode,
+            overlay?.configure(keyboardEnabled: enabled, x: x, y: y, size: size, visible: visible, menuMode: menuMode,
                                hudEnabled: hudEnabled, hudScale: hudScale)
+            overlay?.configureGyroscope(enabled: gyroEnabled, sensitivity: gyroSensitivity)
             root.bringSubviewToFront(overlay!)
         }
     }
