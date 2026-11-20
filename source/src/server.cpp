@@ -2775,7 +2775,6 @@ void changeclientrole(int client, int role, char *pwd, bool force)
         if(role > CR_DEFAULT) sendiplist(client);
     }
     else if(pwd && pwd[0]) disconnect_client(client, DISC_SOPLOGINFAIL); // avoid brute-force
-    IOS_SERVER_TRACE("server: before vote processing");
     if(curvote) curvote->evaluate();
 }
 
@@ -4626,7 +4625,6 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     IOS_SERVER_TRACE("server: before dedicated-server early return");
     if(!isdedicated) {
         IOS_SERVER_TRACE("server: returning for non-dedicated client");
-#undef IOS_SERVER_TRACE
         return;
     }
 
