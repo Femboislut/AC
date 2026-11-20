@@ -620,6 +620,7 @@ void audiomanager::updateaudio()
         updateplayerfootsteps(p);
     }
 
+#if defined(AC_PLATFORM_IOS)
     IOS_AUDIO_LOG("audio: all footsteps updated");
 #endif
 
@@ -635,6 +636,7 @@ void audiomanager::updateaudio()
     bool heartbeatsound = heartbeat && alive && firstperson && !m_osok && player1->health <= heartbeat;
     updateloopsound(S_HEARTBEAT, heartbeatsound);
 
+#if defined(AC_PLATFORM_IOS)
     IOS_AUDIO_LOG("audio: tinnitus loop complete");
 #endif
 
@@ -653,6 +655,7 @@ void audiomanager::updateaudio()
         locations.forcepitch(currentpitch);
     }
 
+#if defined(AC_PLATFORM_IOS)
     IOS_AUDIO_LOG("audio: pitch effects complete");
 #endif
 
@@ -686,6 +689,7 @@ void audiomanager::updateaudio()
         lastmapsound = totalmillis;
     }
 
+#if defined(AC_PLATFORM_IOS)
     IOS_AUDIO_LOG("audio: map sounds complete");
 #endif
 
@@ -716,6 +720,7 @@ void audiomanager::updateaudio()
         }
     }
 
+#if defined(AC_PLATFORM_IOS)
     IOS_AUDIO_LOG("audio: background music update complete");
 #endif
 
