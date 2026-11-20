@@ -93,7 +93,7 @@ private enum ACKeyboardOverlay {
 
             if overlay == nil || overlay?.superview !== root {
                 overlay?.removeFromSuperview()
-                let newOverlay = ACKKeyboardOverlayView(frame: root.bounds)
+                let newOverlay = ACKeyboardOverlayView(frame: root.bounds)
                 root.addSubview(newOverlay)
                 overlay = newOverlay
             }
