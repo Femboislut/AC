@@ -6,6 +6,7 @@
 #endif
 
 #if defined(AC_PLATFORM_IOS)
+VAR(iosplatform, 0, 1, 1);
 extern "C" int ac_ios_ensure_game_data(void);
 static void close_ios_gl4es();
 static bool iosmenumode = true;
@@ -25,6 +26,7 @@ static void clear_iosstartup_log()
         remove(path);
 }
 #else
+VAR(iosplatform, 0, 0, 1);
 static void iosstartup_log(const char *) {}
 #endif
 
