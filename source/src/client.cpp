@@ -3,6 +3,13 @@
 #include "cube.h"
 #include "bot/bot.h"
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#define IOS_SENDINTRO_TRACE(message) iosstartup_log(message)
+#else
+#define IOS_SENDINTRO_TRACE(message) do { } while(0)
+#endif
+
 VAR(connected, 1, 0, 0);
 
 ENetHost *clienthost = NULL;
@@ -512,31 +519,47 @@ int getbuildtype()
 
 void sendintro()
 {
-    mlog(ACLOG_INFO, "client: sendintro entered; player1=%p", (void *)player1);
+    IOS_SENDINTRO_TRACE("sendintro: entered");
+    if(!player1)
+    {
+        IOS_SENDINTRO_TRACE("sendintro: ABORT player1 is null");
+        return;
+    }
+    IOS_SENDINTRO_TRACE("sendintro: player1 valid");
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
-    mlog(ACLOG_INFO, "client: sendintro packet allocated");
+    IOS_SENDINTRO_TRACE("sendintro: packet allocated");
     putint(p, SV_CONNECT);
     putint(p, AC_VERSION);
     putint(p, getbuildtype());
+    IOS_SENDINTRO_TRACE("sendintro: protocol header written");
     sendstring(player1->name, p);
-    mlog(ACLOG_INFO, "client: sendintro identity fields written");
+    IOS_SENDINTRO_TRACE("sendintro: player name written");
     sendstring(genpwdhash(player1->name, clientpassword, sessionid), p);
-    mlog(ACLOG_INFO, "client: sendintro password hash written");
+    IOS_SENDINTRO_TRACE("sendintro: password hash written");
     sendstring(!lang || strlen(lang) != 2 ? "" : lang, p);
     putint(p, connectrole);
-    clientpassword[0] = '\0';
+    clientpassword[0] = '\\0';
     connectrole = CR_DEFAULT;
-    mlog(ACLOG_INFO, "client: sendintro nextprimweap=%p", (void *)player1->nextprimweap);
-    putint(p, player1->nextprimweap->type);
-    mlog(ACLOG_INFO, "client: sendintro weapon field written");
+    IOS_SENDINTRO_TRACE("sendintro: language and role written");
+
+    weapon *introprimary = player1->nextprimweap;
+    if(!introprimary) introprimary = player1->primweap;
+    if(!introprimary) introprimary = player1->weapons[GUN_ASSAULT];
+    int introprimarytype = introprimary ? introprimary->type : GUN_ASSAULT;
+    IOS_SENDINTRO_TRACE("sendintro: primary weapon resolved");
+    putint(p, introprimarytype);
+    IOS_SENDINTRO_TRACE("sendintro: primary weapon field written");
+
     loopi(2) putint(p, player1->skin(i));
     putint(p, player1->maxroll);
     putint(p, player1->maxrolleffect);
     putint(p, player1->ffov);
     putint(p, player1->scopefov);
-    mlog(ACLOG_INFO, "client: sendintro packet fields complete");
-    sendpackettoserv(1, p.finalize());
-    mlog(ACLOG_INFO, "client: sendintro packet sent");
+    IOS_SENDINTRO_TRACE("sendintro: all packet fields written");
+    ENetPacket *introPacket = p.finalize();
+    IOS_SENDINTRO_TRACE("sendintro: packet finalized");
+    sendpackettoserv(1, introPacket);
+    IOS_SENDINTRO_TRACE("sendintro: packet dispatched");
 }
 
 void gets2c()           // get updates from the server
