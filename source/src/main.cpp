@@ -10,6 +10,7 @@
 #if defined(AC_PLATFORM_IOS)
 VAR(iosplatform, 0, 1, 1);
 extern "C" int ac_ios_ensure_game_data(void);
+extern bool menuvisible();
 static void close_ios_gl4es();
 static bool iosmenumode = true;
 static bool ioslastmenuvisible = true;
