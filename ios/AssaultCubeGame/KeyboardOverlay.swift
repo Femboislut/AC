@@ -31,6 +31,8 @@ private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
     private let motionManager = CMMotionManager()
     private var gyroEnabled = false
     private var gyroSensitivity: Double = 1
+    private var gyroInvertX = false
+    private var gyroInvertY = true
     private var pressedDirections: Set<Int32> = []
     private var editingControls = false
     private var joystickPan: UIPanGestureRecognizer!
@@ -404,9 +406,11 @@ private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
         setNeedsLayout()
     }
 
-    func configureGyroscope(enabled: Bool, sensitivity: Double) {
+    func configureGyroscope(enabled: Bool, sensitivity: Double, invertX: Bool, invertY: Bool) {
         gyroEnabled = enabled
         gyroSensitivity = min(max(sensitivity, 0.1), 3.0)
+        gyroInvertX = invertX
+        gyroInvertY = invertY
         refreshGyroscope()
     }
 
@@ -440,8 +444,8 @@ private final class ACKeyboardOverlayView: UIView, UIGestureRecognizerDelegate {
                 // Integrate angular velocity over the sample interval. The old
                 // code treated rad/s as a per-frame delta, making gyro far too fast.
                 let factor = self.gyroSensitivity * 520.0 * dt
-                let dx = min(max(yaw * factor, -48), 48)
-                let dy = min(max(pitch * factor, -48), 48)
+                let dx = min(max((self.gyroInvertX ? -yaw : yaw) * factor, -48), 48)
+                let dy = min(max((self.gyroInvertY ? -pitch : pitch) * factor, -48), 48)
                 acEngineGyroMotion(Float(dx), Float(dy))
             }
         } else if !shouldRun && motionManager.isGyroActive {
@@ -488,7 +492,7 @@ private enum ACKeyboardOverlay {
             overlay?.frame = root.bounds
             overlay?.configure(keyboardEnabled: enabled, x: x, y: y, size: size, visible: visible, menuMode: menuMode,
                                hudEnabled: hudEnabled, hudScale: hudScale)
-            overlay?.configureGyroscope(enabled: gyroEnabled, sensitivity: gyroSensitivity)
+            overlay?.configureGyroscope(enabled: gyroEnabled, sensitivity: gyroSensitivity, invertX: gyroInvertX, invertY: gyroInvertY)
             root.bringSubviewToFront(overlay!)
         }
     }
@@ -509,11 +513,13 @@ public func acIOSTouchHUDUpdate(_ enabled: Int32, _ scale: Float) {
 }
 
 @_cdecl("ac_ios_gyro_config_update")
-public func acIOSGyroConfigUpdate(_ enabled: Int32, _ sensitivity: Float) {
+public func acIOSGyroConfigUpdate(_ enabled: Int32, _ sensitivity: Float, _ invertX: Int32, _ invertY: Int32) {
     ACKeyboardOverlay.gyroEnabled = enabled != 0
     ACKeyboardOverlay.gyroSensitivity = Double(sensitivity)
+    ACKeyboardOverlay.gyroInvertX = invertX != 0
+    ACKeyboardOverlay.gyroInvertY = invertY != 0
     DispatchQueue.main.async { ACKeyboardOverlay.overlay?.configureGyroscope(
-        enabled: ACKeyboardOverlay.gyroEnabled, sensitivity: ACKeyboardOverlay.gyroSensitivity) }
+        enabled: ACKeyboardOverlay.gyroEnabled, sensitivity: ACKeyboardOverlay.gyroSensitivity, invertX: ACKeyboardOverlay.gyroInvertX, invertY: ACKeyboardOverlay.gyroInvertY) }
 }
 
 @_cdecl("ac_ios_keyboard_overlay_update")
