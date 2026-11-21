@@ -4,6 +4,8 @@ An independent iOS port of [AssaultCube](https://assault.cubers.net/), based on 
 
 **Status:** Functional and device-tested by the maintainer. The current build has been reported stable on an iPhone 11. It remains an experimental community port because device coverage, signing/install paths, and long-term compatibility have not been independently tested across the full iOS device range.
 
+**Canonical branch:** `master` now contains the integrated port and is the branch for ongoing development and stable releases. The older `ios/*` branches are historical snapshots; they are retained for now rather than deleted without a branch-deletion operation available in this integration.
+
 ## Download
 
 - **[Download the latest stable IPA](https://github.com/TangiDev69/Assaultcube-ios-port/releases/latest/download/AssaultCube-iOS-Game.ipa)**
