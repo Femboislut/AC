@@ -17,7 +17,7 @@ static bool ioslastmenuvisible = true;
 static bool iosprofileinitialized = false;
 extern "C" void ac_ios_input_mode_update(int menuMode);
 extern "C" void ac_ios_touch_hud_update(int enabled, float scale);
-extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity);
+extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity, int invertX, int invertY);
 
 // Startup diagnostics are disabled for iOS builds. Keep this externally
 // linked because other engine translation units call iosstartup_log().
@@ -884,13 +884,15 @@ VARFP(ioshud, 0, 1, 1, ioskeyboardoverlayupdate());
 VARFP(ioshudscale, 60, 100, 140, ioskeyboardoverlayupdate());
 VARFP(iosgyro, 0, 0, 1, ioskeyboardoverlayupdate());
 VARFP(iosgyrosensitivity, 10, 100, 300, ioskeyboardoverlayupdate());
+VARFP(iosgyroinvertx, 0, 0, 1, ioskeyboardoverlayupdate());
+VARFP(iosgyroinverty, 0, 1, 1, ioskeyboardoverlayupdate());
 static void ioskeyboardoverlayupdate()
 {
     ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
                                   (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
     ac_ios_input_mode_update(iosmenumode ? 1 : 0);
     ac_ios_touch_hud_update(ioshud, (float)ioshudscale / 100.0f);
-    ac_ios_gyro_config_update(iosgyro, (float)iosgyrosensitivity / 100.0f);
+    ac_ios_gyro_config_update(iosgyro, (float)iosgyrosensitivity / 100.0f, iosgyroinvertx, iosgyroinverty);
 }
 extern "C" void ac_ios_toggle_keyboard()
 {
