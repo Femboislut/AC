@@ -1,67 +1,41 @@
-# iOS port development notes
+# iOS development notes
 
-This document records the current status, build pipeline, import procedure, and implementation plan. It distinguishes CI build evidence from actual device validation.
+## Current status
 
-## Status
+The port is functional and has been device-tested by the maintainer. The current build is reported stable on an iPhone 11. This is user-reported device validation, not a claim of universal iOS compatibility.
 
-**Experimental; not yet verified playable on a physical iPhone.**
+The latest successful CI build is [build 164](https://github.com/TangiDev69/Assaultcube-ios-port/actions/runs/44845433560). It compiled the dependencies, engine, extractor and app, verified the IPA bundle, and published the IPA.
 
-### Verified
-- The SwiftUI data importer has been installed and tested on an iPhone.
-- It validated **1,829 files / approximately 49 MB** from the official Windows installer.
-- CI previously compiled ARM64 SDL2, GL4ES, Ogg/Vorbis, ENet, and the AssaultCube engine library.
-- The SDL/GL4ES smoke-test IPA is a renderer/bootstrap test, not gameplay.
+## Device resolution
 
-## Import game data from an iPhone
+The iOS SDL window requests `SDL_WINDOW_ALLOW_HIGHDPI`; SDL's UIKit OpenGL view then uses the device native scale for its drawable. This means the app uses the device's drawable pixel dimensions rather than a resolution hard-coded for the maintainer's iPhone 11.
 
-1. Download the official Windows AssaultCube installer from [the official downloads page](https://assault.cubers.net/download.html).
-2. Keep the `.exe` in Files.
-3. Long-press it, tap **Share**, and select the importer. If you're using LiveContainer, share the file to LiveContainer and open the importer there.
-4. Complete the import and verify the valid-data message.
+A user-selectable internal render resolution / scale is not implemented. Native display resolution is selected automatically.
 
-This extracts data only. The installer and Windows executables/DLLs are never run.
+## Install and data import
 
-## Mobile input implementation in progress
+1. Install the IPA using a compatible sideloading workflow.
+2. Download the official AssaultCube Windows installer from [the official downloads page](https://assault.cubers.net/download.html).
+3. Use the in-app importer to select the installer from Files.
+4. The extractor reads the installer and extracts game data; it does not execute Windows binaries.
 
-The iOS game target now has a native Aim/Menu switch, an on-screen menu navigation pad, a virtual movement stick, fire/jump/crouch/reload/grenade/weapon shortcuts, adjustable HUD scale, optional CoreMotion gyro aiming, and an iOS Touch Controls page in the original Settings menu. These controls inject SDL input events so the existing AssaultCube key bindings and gameplay code remain authoritative. Menu mode is the default and avoids the engine's normal first-click-to-capture behavior. See [the touch-control implementation and validation notes](../docs/ios-mobile-controls.md).
+## Mobile controls
 
-The following remain planned or require further work:
+The iOS overlay includes an Aim/Menu mode switch, virtual movement stick, look/touch aiming, fire, jump, crouch, reload, grenade and weapon shortcuts, editable control layout, HUD scale, and optional gyro aiming with separate axis inversion. Text entry can use the iOS keyboard toggle. Controls feed the engine's input layer.
 
-- SDL-owned iOS app lifecycle and engine launch.
-- Native game-data and profile path handoff (`Documents/GameData` and `Documents/Profile`).
-- Touch HUD: per-control dragging, opacity adjustment, individual button remapping, and saved custom layouts.
-- Gyroscope aiming: physical-device axis calibration, horizontal/vertical inversion and fine-grained mode options.
-- Bluetooth controller support: configurable mapping, dead zones and vibration where supported.
-- Additional iOS-specific settings pages for per-button positioning/remapping, opacity and saved layouts; the original game settings remain available.
-- Multiplayer UI improvements: server list refresh, favourites, ping, direct connect and reconnect.
-- Stable lifecycle: suspend/resume, safe config saving, and performance options.
+The maintainer has reported the current control setup working on the tested iPhone. Other device layouts and controller combinations may need adjustment.
 
+## Build
 
-## iOS keyboard toggle and diagnostics
+The [iOS ARM64 dependency build workflow](../.github/workflows/ios-dependencies-build.yml) is the source of truth. It pins third-party dependency revisions and builds the engine and app. Development-branch runs create prereleases; master runs create stable releases.
 
-- A floating **⌨ Hide / Show** control stays near the top of the screen. It shows or hides the iOS keyboard for the active AssaultCube text-entry field; it does not create a console input field by itself.
-- Its saved config variables can be customized from the in-game console: `ioskeyboardbutton 1` enables it, `ioskeyboardx 92` and `ioskeyboardy 7` move it (0–100 percent), and `ioskeyboardsize 48` adjusts its size (32–80 points). Set `ioskeyboardbutton 0` to hide it.
-- iOS builds no longer write the persistent startup breadcrumb file or client diagnostic log. Existing `Documents/AssaultCubeStartup.log` is deleted on launch.
+The workflow also uploads temporary engine diagnostics and dependency archives. The IPA is attached directly to the GitHub Release.
 
-## Build workflow
+## Remaining scope
 
-The [iOS ARM64 dependency build](../.github/workflows/ios-dependencies-build.yml) builds the pinned dependencies, engine, importer, smoke test, and game app. Its published IPA is marked prerelease until physical-device validation is complete.
+- Manual render-scale / internal resolution selector.
+- Additional device and iOS-version compatibility testing.
+- More comprehensive multiplayer/server-browser reliability testing.
+- Performance and battery testing on devices beyond the maintainer's iPhone.
+- Sideloading/signing guidance for different workflows.
 
-CI artifacts are temporary test outputs. Only a device-tested IPA should be promoted to a GitHub Release.
-
-## Runtime architecture notes
-
-SDL2 should own the UIKit application entry point, window, GLES context and event loop. GL4ES provides compatibility for the engine's desktop OpenGL calls. The importer is a separate prototype target; do not assume its SwiftUI interface or settings currently appear in the game.
-
-## Development quality gate
-
-Before describing a build as playable, verify on-device:
-1. App launches and doesn't immediately crash.
-2. Imported assets are discovered and the initial map/menu loads.
-3. Menu clicks, touch movement, looking, firing, multi-touch, and buttons work without interfering.
-4. Gyroscope responds correctly in both axes, including calibration and inversion.
-5. Controller input and reconnect behaviour are tested.
-6. Graphics, sound, settings persistence, background/resume and quit are checked.
-7. Multiplayer server discovery and direct connection are tested, with limitations documented.
-
-Until those checks pass, keep the project marked experimental.
