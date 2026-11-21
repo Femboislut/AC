@@ -2,7 +2,7 @@
 
 An independent iOS port of [AssaultCube](https://assault.cubers.net/), based on the upstream [AssaultCube source](https://github.com/assaultcube/AC).
 
-**Status:** Functional and device-tested by the maintainer. The current build has been reported stable on an iPhone 11. It remains an experimental community port because device coverage, signing/install paths, and long-term compatibility have not been independently tested across the full iOS device range.
+**Status:** Functional and device-tested by the maintainer. The current build has been reported stable. It remains an experimental community port because device coverage, signing/install paths, and long-term compatibility have not been independently tested across the full iOS device range.
 
 **Canonical branch:** `master` now contains the integrated port and is the branch for ongoing development and stable releases. The older `ios/*` branches are historical snapshots; they are retained for now rather than deleted without a branch-deletion operation available in this integration.
 
@@ -12,7 +12,7 @@ An independent iOS port of [AssaultCube](https://assault.cubers.net/), based on 
 - [All releases](https://github.com/TangiDev69/Assaultcube-ios-port/releases)
 - [Latest successful iOS build (CI)](https://github.com/TangiDev69/Assaultcube-ios-port/actions)
 
-The IPA is unsigned and intended for compatible sideloading workflows such as LiveContainer. This is not an App Store release.
+The IPA is unsigned and intended for compatible sideloading workflows such as sidestore or LiveContainer.
 
 ## Features
 
@@ -29,7 +29,7 @@ The maintainer reports these features working in the current iPhone 11 build; co
 
 ## Resolution
 
-The app requests a high-DPI drawable and uses the device's available native pixel dimensions automatically. It does **not** hardcode the iPhone 11 resolution. A manual render-resolution / render-scale selector is not currently provided.
+The app requests a high-DPI drawable and uses the device's available native pixel dimensions automatically. A manual render-resolution / render-scale selector is not currently provided.
 
 ## Install and import game data
 
@@ -55,6 +55,6 @@ See [iOS development notes](ios/README.md) and [the engineering plan](ios/ENGINE
 
 - **Upstream:** AssaultCube project and contributors. See upstream notices and license files.
 - **Port maintainer:** TangiDev69.
-- **AI coding assistance:** Codex (OpenAI / ChatGPT), assisting with implementation, debugging, and documentation.
+- **coding assistance:** Codex (OpenAI / ChatGPT), assisting with implementation, debugging, and documentation.
 
 This is an independent port, not an official AssaultCube release. Review the applicable upstream licenses before redistributing software or game assets.
