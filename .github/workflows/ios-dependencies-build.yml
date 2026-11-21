@@ -1,0 +1,364 @@
+name: iOS ARM64 dependency build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - ios/port-build-infra
+    paths:
+      - 'ios/Engine/**'
+      - 'ios/AssaultCubeSDLTest/**'
+      - 'ios/AssaultCubeData/**'
+      - 'ios/AssaultCubeApp/**'
+      - 'ios/AssaultCubeGame/**'
+      - 'ios/NSISExtractor/**'
+      - 'ios/project.yml'
+      - 'ios/scripts/generate-app-icon.swift'
+      - 'ios/third_party/gl4es/**'
+      - 'source/src/**'
+      - 'source/enet/**'
+      - '.github/workflows/ios-dependencies-build.yml'
+      - 'scripts/validate-ios-engine-source-list.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-arm64-dependencies-${{ github.ref }}
+  # Keep only the newest commit's build; cancel stale queued/running attempts.
+  cancel-in-progress: true
+
+jobs:
+  build-dependencies:
+    name: Build SDL2, GL4ES and Ogg/Vorbis sequentially
+    runs-on: macos-26-intel
+    timeout-minutes: 90
+    steps:
+      - name: Check out AssaultCube and GL4ES submodule
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Check out pinned SDL2 source
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL
+          ref: fe30456e94e89ef2cab50172121bffb7f7f50830
+          path: SDL
+      - name: Check out pinned SDL2_image source
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL_image
+          ref: release-2.8.8
+          path: SDL_image
+      - name: Check out pinned libogg source
+        uses: actions/checkout@v4
+        with:
+          repository: xiph/ogg
+          ref: e1774cd77f471443541596e09078e78fdc342e4f
+          path: libogg
+      - name: Check out pinned libvorbis source
+        uses: actions/checkout@v4
+        with:
+          repository: xiph/vorbis
+          ref: 0657aee69dec8508a0011f47f3b69d7538e9d262
+          path: libvorbis
+      - name: Check out pinned iOS CMake toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: leetal/ios-cmake
+          ref: b36d5bce6f9a2d11d9f144bd5882ba31cfdca420
+          path: ios-cmake
+      - name: Verify toolchain and source revisions
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          cmake --version
+          git submodule status
+          test -f ios/third_party/gl4es/CMakeLists.txt
+          git -C SDL rev-parse HEAD
+          git -C libogg rev-parse HEAD
+          git -C libvorbis rev-parse HEAD
+      - name: Cache native dependency build directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/sdl2
+            build/sdl2_image
+            build/ogg
+            build/vorbis
+            build/gl4es
+          key: ios-native-deps-v3-${{ runner.os }}-xcode26-sdl-fe30456e94e89ef2cab50172121bffb7f7f50830-ogg-e1774cd77f471443541596e09078e78fdc342e4f-vorbis-0657aee69dec8508a0011f47f3b69d7538e9d262-gl4es-8b1a3da5d2331d0f88b70be25963182d46eed857
+      - name: Validate iOS engine source list against desktop client manifest
+        run: python3 scripts/validate-ios-engine-source-list.py
+
+      - name: Verify iOS platform compile definition
+        run: |
+          set -euo pipefail
+          grep -Fq 'target_compile_definitions(AssaultCubeEngine PUBLIC AC_PLATFORM_IOS=1)' ios/Engine/CMakeLists.txt
+          grep -Fq '#if defined(AC_PLATFORM_IOS)' source/src/main.cpp
+      - name: Build SDL2 for arm64 iOS
+        run: |
+          set -euxo pipefail
+          cmake -S SDL -B build/sdl2 -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_TESTS=OFF
+          # Build the Xcode targets separately so a target-specific failure is
+          # visible in the Actions log instead of being hidden in one invocation.
+          cmake --build build/sdl2 --config Release --target SDL2-static
+          cmake --build build/sdl2 --config Release --target SDL2main
+          mkdir -p build/package/SDL2/lib build/package/SDL2/include
+          # Xcode may expose configuration outputs through symlinks; follow them
+          # rather than silently skipping archives with find -type f.
+          find build/sdl2 -name 'libSDL2*.a' -exec cp -L {} build/package/SDL2/lib/ \;
+          echo "SDL2 archive outputs:"
+          ls -lah build/package/SDL2/lib
+          test -s build/package/SDL2/lib/libSDL2.a
+          test -s build/package/SDL2/lib/libSDL2main.a
+          cp -R SDL/include/. build/package/SDL2/include/
+          if [ -d build/sdl2/include ]; then cp -R build/sdl2/include/. build/package/SDL2/include/; fi
+          if [ -d build/sdl2/include-config-release/SDL2 ]; then
+            mkdir -p build/package/SDL2/include/SDL2
+            cp -R build/sdl2/include-config-release/SDL2/. build/package/SDL2/include/SDL2/
+          fi
+      - name: Build SDL2_image for arm64 iOS (STB backend)
+        run: |
+          set -euxo pipefail
+          cmake -S SDL_image -B build/sdl2_image -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DSDL2_INCLUDE_DIR="$GITHUB_WORKSPACE/build/package/SDL2/include" \
+            -DSDL2_LIBRARY="$GITHUB_WORKSPACE/build/package/SDL2/lib/libSDL2.a" \
+            -DBUILD_SHARED_LIBS=OFF -DSDL2IMAGE_INSTALL=OFF \
+            -DSDL2IMAGE_SAMPLES=OFF -DSDL2IMAGE_TESTS=OFF \
+            -DSDL2IMAGE_BACKEND_IMAGEIO=OFF -DSDL2IMAGE_BACKEND_STB=ON \
+            -DSDL2IMAGE_AVIF=OFF -DSDL2IMAGE_JXL=OFF -DSDL2IMAGE_WEBP=OFF \
+            -DSDL2IMAGE_TIF=OFF
+          cmake --build build/sdl2_image --config Release --target SDL2_image
+          mkdir -p build/package/SDL2_image/lib build/package/SDL2_image/include
+          find build/sdl2_image -name 'libSDL2_image*.a' -exec cp -L {} build/package/SDL2_image/lib/ \;
+          cp -R SDL_image/include/. build/package/SDL2_image/include/
+          test -s build/package/SDL2_image/lib/libSDL2_image.a
+          test -s build/package/SDL2_image/include/SDL_image.h
+      - name: Build libogg for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S libogg -B build/ogg -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/install" \
+            -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF \
+            -DINSTALL_DOCS=OFF -DINSTALL_PKG_CONFIG_MODULE=OFF \
+            -DINSTALL_CMAKE_PACKAGE_MODULE=ON
+          cmake --build build/ogg --config Release --target ogg
+          cmake --install build/ogg --config Release
+      - name: Build libvorbis decoder for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S libvorbis -B build/vorbis -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/install" \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/install" \
+            -DBUILD_SHARED_LIBS=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          cmake --build build/vorbis --config Release --target vorbis vorbisenc vorbisfile
+          cmake --install build/vorbis --config Release
+          mkdir -p build/package/Audio/lib build/package/Audio/include
+          cp build/install/lib/libogg.a build/package/Audio/lib/
+          cp build/install/lib/libvorbis.a build/package/Audio/lib/
+          cp build/install/lib/libvorbisfile.a build/package/Audio/lib/
+          cp build/install/lib/libvorbisenc.a build/package/Audio/lib/
+          cp -R build/install/include/ogg build/package/Audio/include/
+          cp -R build/install/include/vorbis build/package/Audio/include/vorbis/
+      - name: Apply Darwin-compatible GL4ES aliases
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("ios/third_party/gl4es/src/gl/directstate.c")
+          source = path.read_text()
+          replacements = {
+              "AliasDecl(void,gl4es_glEnableClientStatei,(GLenum array, GLuint index),gl4es_glEnableClientStateIndexed);":
+                  "void APIENTRY_GL4ES gl4es_glEnableClientStatei(GLenum array, GLuint index) { gl4es_glEnableClientStateIndexed(array, index); }",
+              "AliasDecl(void,gl4es_glDisableClientStatei,(GLenum array, GLuint index),gl4es_glDisableClientStateIndexed);":
+                  "void APIENTRY_GL4ES gl4es_glDisableClientStatei(GLenum array, GLuint index) { gl4es_glDisableClientStateIndexed(array, index); }",
+          }
+          for old, new in replacements.items():
+              if old not in source:
+                  raise SystemExit(f"Expected GL4ES alias declaration not found: {old}")
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          print("Applied two Darwin-safe GL4ES forwarding functions.")
+          PY
+      - name: Build GL4ES for arm64 iOS
+        run: |
+          set -euo pipefail
+          cmake -S ios/third_party/gl4es -B build/gl4es -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DPLATFORM=OS64 -DNOX11=ON -DNOEGL=ON -DSTATICLIB=ON \
+            -DNO_LOADER=ON -DNO_INIT_CONSTRUCTOR=ON -DDEFAULT_ES=2
+          cmake --build build/gl4es --config Release --target GL
+          GL4ES_ARCHIVE="$(find ios/third_party/gl4es/lib -type f -name 'libGL.a' -print -quit)"
+          test -n "$GL4ES_ARCHIVE"
+          mkdir -p build/package/GL4ES/include
+          cp "$GL4ES_ARCHIVE" build/package/GL4ES/
+          cp -R ios/third_party/gl4es/include/GL build/package/GL4ES/include/
+          cp ios/third_party/gl4es/include/gl4esinit.h build/package/GL4ES/include/
+          cp ios/third_party/gl4es/include/gl4eshint.h build/package/GL4ES/include/
+      - name: Compile AssaultCube engine sources for arm64 iOS
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          cmake -S ios/Engine -B build/engine -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/ios-cmake/ios.toolchain.cmake" \
+            -DPLATFORM=OS64 -DCMAKE_BUILD_TYPE=Release \
+            -DAC_IOS_DEPS_DIR="$GITHUB_WORKSPACE/build/package" \
+            2>&1 | tee build/logs/engine-configure.log
+          cmake --build build/engine --config Release --target AssaultCubeEngine \
+            2>&1 | tee build/logs/engine-build.log
+          mkdir -p build/package/Engine/lib
+          echo "Engine archive outputs (including symlinks):"
+          find build/engine -name 'libAssaultCubeEngine.a' -o -name 'libAC_ENET.a'
+          find build/engine -name 'libAssaultCubeEngine.a' -exec cp -L {} build/package/Engine/lib/ \;
+          find build/engine -name 'libAC_ENET.a' -exec cp -L {} build/package/Engine/lib/ \;
+          echo "Packaged engine archives:"
+          ls -lah build/package/Engine/lib
+          test -s build/package/Engine/lib/libAssaultCubeEngine.a
+          test -s build/package/Engine/lib/libAC_ENET.a
+      - name: Verify static library architectures and package
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' archive; do
+            xcrun lipo -info "$archive"
+            echo "Verifying arm64 slice: $archive"
+            xcrun lipo "$archive" -verify_arch arm64
+          done < <(find build/package -name '*.a' -print0)
+          test -f build/package/SDL2_image/lib/libSDL2_image.a
+          test -f build/package/Audio/lib/libogg.a
+          test -f build/package/Audio/lib/libvorbis.a
+          test -f build/package/Audio/lib/libvorbisfile.a
+          test -f build/package/Engine/lib/libAssaultCubeEngine.a
+          test -f build/package/Engine/lib/libAC_ENET.a
+          test -f build/package/Audio/lib/libvorbisenc.a
+          tar -czf AssaultCube-iOS-ARM64-dependencies.tar.gz -C build/package .
+      - name: Upload combined dependency artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-ARM64-dependencies
+          path: AssaultCube-iOS-ARM64-dependencies.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build native NSIS extractor for iOS
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-ios
+          cargo test --manifest-path ios/NSISExtractor/Cargo.toml
+          curl --fail --location --retry 3 --output /tmp/AssaultCube_v1.3.0.2.exe "https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition.exe"
+          cargo run --manifest-path ios/NSISExtractor/Cargo.toml --example extract_installer -- /tmp/AssaultCube_v1.3.0.2.exe /tmp/ac-nsis-extracted
+          find /tmp/ac-nsis-extracted -path '*/config/font.cfg' -print -quit | grep -q .
+          find /tmp/ac-nsis-extracted -path '*/packages/maps/official/*.cgz' -print -quit | grep -q .
+          cargo build --manifest-path ios/NSISExtractor/Cargo.toml --release --target aarch64-apple-ios
+          mkdir -p build/nsis-target/aarch64-apple-ios/release
+          cp ios/NSISExtractor/target/aarch64-apple-ios/release/libac_nsis_extractor.a build/nsis-target/aarch64-apple-ios/release/
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate AssaultCube app icon
+        run: swift ios/scripts/generate-app-icon.swift ios/AssaultCubeApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate --spec project.yml
+      - name: Cache Xcode Swift package checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/ios-game/SourcePackages
+          key: ios-spm-${{ runner.os }}-xcode26-${{ hashFiles('ios/project.yml', 'ios/AssaultCubeData/Package.swift') }}
+          restore-keys: |
+            ios-spm-${{ runner.os }}-xcode26-
+
+      - name: Build native AssaultCube game app
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          xcodebuild \
+            -project ios/AssaultCube.xcodeproj \
+            -scheme AssaultCubeGame \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$PWD/build/ios-game" \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build/logs/game-build.log
+          APP_PATH="build/ios-game/Build/Products/Release-iphoneos/AssaultCube.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          # XcodeGen can preserve the source folder hierarchy for file resources.
+          # The engine resolves this config from the app bundle root, so stage
+          # the authoritative iOS menu there explicitly before IPA packaging.
+          install -m 0644 ios/AssaultCubeApp/MobileConfig/menus_settings.cfg "$APP_PATH/menus_settings.cfg"
+          test -s "$APP_PATH/menus_settings.cfg"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
+          # XcodeGen/Xcode may omit this display-name key when processing a
+          # hand-authored Info.plist. Normalize the built bundle before IPA
+          # packaging so the installed app has a stable SpringBoard name.
+          python3 - "$APP_PATH/Info.plist" <<'PY'
+          import plistlib, sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          with path.open("rb") as stream:
+              info = plistlib.load(stream)
+          if info.get("CFBundleIdentifier") != "net.cubers.assaultcube.ios":
+              raise SystemExit("Unexpected app bundle identifier")
+          info["CFBundleDisplayName"] = "AssaultCube"
+          info["CFBundleName"] = "AssaultCube"
+          with path.open("wb") as stream:
+              plistlib.dump(info, stream, fmt=plistlib.FMT_XML, sort_keys=False)
+          PY
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          mkdir -p build/ios-game-ipa/Payload
+          ditto "$APP_PATH" build/ios-game-ipa/Payload/AssaultCube.app
+          (cd build/ios-game-ipa && /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/AssaultCube-iOS-Game.ipa")
+          unzip -l AssaultCube-iOS-Game.ipa | grep -E "Payload/AssaultCube.app/Info.plist$"
+      - name: Verify final app identity and icon
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios-game/Build/Products/Release-iphoneos/AssaultCube.app"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist" | grep -Fx "net.cubers.assaultcube.ios"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$APP_PATH/Info.plist" | grep -Fx "AssaultCube"
+          test -s "$APP_PATH/Assets.car"
+          test -s "AssaultCube-iOS-Game.ipa"
+          unzip -l AssaultCube-iOS-Game.ipa | grep -F "Payload/AssaultCube.app/Assets.car"
+          MENU_RESOURCE="$(find "$APP_PATH" -type f -name menus_settings.cfg -print -quit)"
+          test -n "$MENU_RESOURCE"
+          grep -F "iOS Touch Controls" "$MENU_RESOURCE"
+          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/menus_settings.cfg | grep -F "iOS Touch Controls"
+          unzip -p AssaultCube-iOS-Game.ipa Payload/AssaultCube.app/Info.plist > build/game-Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" build/game-Info.plist | grep -Fx "net.cubers.assaultcube.ios"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" build/game-Info.plist | grep -Fx "AssaultCube"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" build/game-Info.plist | grep -Fx "AssaultCube"
+          test -s "$APP_PATH/Info.plist"
+          echo "Verified app bundle metadata and compiled asset catalog."
+      - name: Publish direct IPA release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-ipa-${{ github.run_number }}-${{ github.run_attempt }}
+          name: AssaultCube iOS build ${{ github.run_number }}
+          prerelease: ${{ github.ref != 'refs/heads/master' }}
+          generate_release_notes: false
+          body: |
+            Direct IPA download for compatible sideloading workflows.
+            Development-branch builds are prereleases; master builds are stable releases.
+            This IPA is not wrapped in a GitHub Actions artifact ZIP.
+          files: AssaultCube-iOS-Game.ipa
+      - name: Upload engine diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssaultCube-iOS-engine-diagnostics
+          path: build/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 14

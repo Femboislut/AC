@@ -1,6 +1,39 @@
 // main.cpp: initialisation & main loop
 
 #include "cube.h"
+#if defined(AC_PLATFORM_IOS)
+#include <SDL_main.h>
+#endif
+
+// The Settings menu uses this flag to expose the iOS-only mobile controls page.
+// CI also inspects the IPA to ensure the patched menu resource is really bundled.
+#if defined(AC_PLATFORM_IOS)
+VAR(iosplatform, 0, 1, 1);
+extern "C" int ac_ios_ensure_game_data(void);
+extern bool menuvisible();
+static void close_ios_gl4es();
+static bool iosmenumode = true;
+static bool ioslastmenuvisible = true;
+static bool iosprofileinitialized = false;
+extern "C" void ac_ios_input_mode_update(int menuMode);
+extern "C" void ac_ios_touch_hud_update(int enabled, float scale);
+extern "C" void ac_ios_gyro_config_update(int enabled, float sensitivity, int invertX, int invertY);
+
+// Startup diagnostics are disabled for iOS builds. Keep this externally
+// linked because other engine translation units call iosstartup_log().
+void iosstartup_log(const char *) {}
+static void clear_iosstartup_log()
+{
+    const char *home = getenv("HOME");
+    if(!home || !*home) return;
+    char path[4096];
+    if(snprintf(path, sizeof(path), "%s/Documents/AssaultCubeStartup.log", home) > 0)
+        remove(path);
+}
+#else
+VAR(iosplatform, 0, 0, 1);
+static void iosstartup_log(const char *) {}
+#endif
 
 void cleanup(char *msg)         // single program exit point;
 {
@@ -13,6 +46,9 @@ void cleanup(char *msg)         // single program exit point;
     }
     SDL_ShowCursor(SDL_TRUE);
     SDL_SetRelativeMouseMode(SDL_FALSE);
+#if defined(AC_PLATFORM_IOS)
+    close_ios_gl4es();
+#endif
     if(msg)
     {
         #ifdef WIN32
@@ -95,6 +131,19 @@ SDL_GLContext glcontext = 0;
 
 VAR(screenw, 1, 0, 0);   // actual current resolution of screen/window
 VAR(screenh, 1, 0, 0);
+
+#if defined(AC_PLATFORM_IOS)
+static void gl4es_get_main_fb_size(int *width, int *height)
+{
+    if(screen) SDL_GL_GetDrawableSize(screen, width, height);
+    else { *width = screenw; *height = screenh; }
+}
+
+static void close_ios_gl4es()
+{
+    if(glcontext) close_gl4es();
+}
+#endif
 #define SCR_MINW 320
 #define SCR_MINH 200
 #define SCR_MAXW 10000
@@ -179,6 +228,12 @@ void inputgrab(bool on, bool delay = false)
 
 void setfullscreen(bool enable)
 {
+#if defined(AC_PLATFORM_IOS)
+    // iOS owns the full-screen drawable. Desktop fullscreen/resolution changes
+    // must never resize or recreate the UIKit-backed SDL window.
+    (void)enable;
+    return;
+#else
     if(!screen) return;
     if(enable == !(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN))
     {
@@ -188,6 +243,7 @@ void setfullscreen(bool enable)
         if(!enable) SDL_SetWindowSize(screen, scr_w, scr_h);
         if(!enable && centerwindow) SDL_SetWindowPosition(screen, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
+#endif
 }
 
 VARF(fullscreen, 0, 1, 1, setfullscreen(fullscreen != 0));
@@ -488,8 +544,16 @@ bool needsautoscreenshot = false;
 
 void updatescreensize()
 {
+#if defined(AC_PLATFORM_IOS)
+    // SDL window dimensions are UIKit points. Render against the drawable's
+    // actual pixel dimensions so Retina devices use their native framebuffer.
+    SDL_GL_GetDrawableSize(screen, &screenw, &screenh);
+    if(screenw < 1 || screenh < 1) SDL_GetWindowSize(screen, &screenw, &screenh);
+#else
     SDL_GetWindowSize(screen, &screenw, &screenh);
+#endif
     if(screenh < 1) screenh = 1;
+    if(screenw < 1) screenw = 1;
     VIRTW = screenw * VIRTH / screenh;
     glViewport(0, 0, screenw, screenh);
 }
@@ -504,8 +568,14 @@ void screenres(int w, int h)
         scr_w = min(scr_w, desktopw);
         scr_h = min(scr_h, desktoph);
     }
+#if defined(AC_PLATFORM_IOS)
+    // iOS owns the drawable size; the requested desktop resolution must not
+    // resize the UIKit surface. updatescreensize() reads native drawable pixels.
+    (void)fullscreendesktop;
+#else
     if(!(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN)) SDL_SetWindowSize(screen, scr_w, scr_h);
     else if(!fullscreendesktop) initwarning("screen resolution");
+#endif
 }
 #if defined(WIN32) || defined(__APPLE__) || !defined(WIN32)
 void setresdata(char *s, enet_uint32 c)
@@ -559,6 +629,9 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 {
     if(glcontext)
     {
+#if defined(AC_PLATFORM_IOS)
+        close_gl4es();
+#endif
         SDL_GL_DeleteContext(glcontext);
         glcontext = NULL;
     }
@@ -590,6 +663,12 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
     int winh = fullscreen && fullscreendesktop ? desktoph : scr_h;
 
     int flags = SDL_WINDOW_RESIZABLE;
+#if defined(AC_PLATFORM_IOS)
+    // Request Retina backing pixels. Without this SDL's UIKit OpenGL view
+    // defaults to point-sized rendering (896x414 on iPhone 11), which is then
+    // stretched to the physical display and makes the entire game blurry.
+    flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
     if(fullscreen) flags |= fullscreendesktop ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
 
     static int configs[] =
@@ -600,6 +679,12 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
         0 /* try disabling everything */
     };
     int config = 0;
+#if defined(AC_PLATFORM_IOS)
+    // SDL's iOS backend creates an OpenGL ES context, not a desktop GL context.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     if(!depthbits) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
     if(!fsaa)
@@ -633,7 +718,17 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
         if(screen)
         {
             glcontext = SDL_GL_CreateContext(screen);
-            if(glcontext) break;
+            if(glcontext)
+            {
+#if defined(AC_PLATFORM_IOS)
+                // GL4ES is built without EGL and uses SDL to resolve GLES entry points
+                // and query the drawable size. The SDL-created context is current here.
+                set_getprocaddress((void *(*)(const char *))SDL_GL_GetProcAddress);
+                set_getmainfbsize(gl4es_get_main_fb_size);
+                initialize_gl4es();
+#endif
+                break;
+            }
             SDL_DestroyWindow(screen);
         }
     }
@@ -649,13 +744,23 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 
     updatescreensize();
 
+#if defined(AC_PLATFORM_IOS)
+    // Start with a visible pointer and working menus. The user explicitly
+    // switches to relative-look mode using the native Aim/Menu control.
+    inputgrab(grabinput = false);
+#else
     inputgrab(grabinput = fullscreen ? true : false);
+#endif
 
     useddepthbits = config&1 ? depthbits : 0;
     usedfsaa = config&2 ? fsaa : 0;
 }
 
 extern int hirestextures;
+
+#if defined(AC_PLATFORM_IOS)
+static void ioskeyboardoverlayupdate();
+#endif
 
 void resetgl()
 {
@@ -677,8 +782,22 @@ void resetgl()
     c2skeepalive();
 
     int useddepthbits = 0, usedfsaa = 0;
+#if defined(AC_PLATFORM_IOS)
+    // Keep the existing UIKit/SDL drawable and its native pixel dimensions.
+    // Calling setupscreen() here can recreate the iOS GL surface and crash.
+    useddepthbits = 0;
+    usedfsaa = 0;
+#else
+    iosstartup_log("startup: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
+    iosstartup_log("startup: setupscreen done");
+#endif
+#if defined(AC_PLATFORM_IOS)
+    ioskeyboardoverlayupdate();
+#endif
+    iosstartup_log("startup: gl_init begin");
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
+    iosstartup_log("startup: gl_init done");
 
     extern void reloadfonts();
     extern Texture *startscreen;
@@ -741,6 +860,98 @@ void fpsrange(int *low, int *high)
 
 COMMAND(fpsrange, "ii");
 
+#if defined(AC_PLATFORM_IOS)
+extern "C" void ac_ios_save_profile(void)
+{
+    if(!iosprofileinitialized) return;
+    // iOS suspends/kills apps without running the normal quit() path.
+    // Persist the same profile data that quit() writes on desktop.
+    writeinitcfg();
+    writeservercfg();
+    writepcksourcecfg();
+    writecfg();
+    savehistory();
+    entropy_save();
+}
+#endif
+
+#if defined(AC_PLATFORM_IOS)
+extern "C" void ac_ios_keyboard_overlay_update(int enabled, int inputActive, int keyboardVisible, float xPercent, float yPercent, float size);
+extern "C" void ac_ios_toggle_keyboard();
+extern "C" void ac_ios_toggle_input_mode();
+static bool ioskeyboardvisible = false;
+extern int textinputmask;
+static void ioskeyboardoverlayupdate();
+VARFP(ioskeyboardbutton, 0, 1, 1, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardx, 0, 92, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardy, 0, 7, 100, ioskeyboardoverlayupdate());
+VARFP(ioskeyboardsize, 32, 48, 80, ioskeyboardoverlayupdate());
+VARFP(ioshud, 0, 1, 1, ioskeyboardoverlayupdate());
+VARFP(ioshudscale, 60, 100, 140, ioskeyboardoverlayupdate());
+VARFP(iosgyro, 0, 0, 1, ioskeyboardoverlayupdate());
+VARFP(iosgyrosensitivity, 10, 100, 300, ioskeyboardoverlayupdate());
+VARFP(iosgyroinvertx, 0, 0, 1, ioskeyboardoverlayupdate());
+VARFP(iosgyroinverty, 0, 1, 1, ioskeyboardoverlayupdate());
+static void ioskeyboardoverlayupdate()
+{
+    ac_ios_keyboard_overlay_update(ioskeyboardbutton, textinputmask != 0, ioskeyboardvisible,
+                                  (float)ioskeyboardx, (float)ioskeyboardy, (float)ioskeyboardsize);
+    ac_ios_input_mode_update(iosmenumode ? 1 : 0);
+    ac_ios_touch_hud_update(ioshud, (float)ioshudscale / 100.0f);
+    ac_ios_gyro_config_update(iosgyro, (float)iosgyrosensitivity / 100.0f, iosgyroinvertx, iosgyroinverty);
+}
+extern "C" void ac_ios_toggle_keyboard()
+{
+    if(ioskeyboardvisible) { SDL_StopTextInput(); ioskeyboardvisible = false; }
+    else { SDL_StartTextInput(); ioskeyboardvisible = true; }
+    ioskeyboardoverlayupdate();
+}
+
+extern "C" void ac_ios_toggle_input_mode()
+{
+    iosmenumode = !iosmenumode;
+    inputgrab(grabinput = !iosmenumode);
+    ac_ios_input_mode_update(iosmenumode ? 1 : 0);
+}
+
+// UIKit touch-HUD controls are translated into ordinary SDL input events so
+// AssaultCube's existing key bindings and weapon/action code remain authoritative.
+extern "C" void ac_ios_virtual_key(int key, int down)
+{
+    SDL_Event event = {};
+    event.type = down ? SDL_KEYDOWN : SDL_KEYUP;
+    event.key.type = event.type;
+    event.key.state = down ? SDL_PRESSED : SDL_RELEASED;
+    event.key.repeat = 0;
+    event.key.keysym.sym = key;
+    event.key.keysym.scancode = SDL_GetScancodeFromKey((SDL_Keycode)key);
+    SDL_PushEvent(&event);
+}
+
+extern "C" void ac_ios_virtual_mouse(int down)
+{
+    SDL_Event event = {};
+    event.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
+    event.button.type = event.type;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
+    event.button.clicks = 1;
+    SDL_PushEvent(&event);
+}
+
+extern "C" void ac_ios_gyro_motion(float dx, float dy)
+{
+    SDL_Event event = {};
+    event.type = SDL_MOUSEMOTION;
+    event.motion.type = SDL_MOUSEMOTION;
+    event.motion.xrel = (int)lrintf(dx);
+    event.motion.yrel = (int)lrintf(dy);
+    if(event.motion.xrel || event.motion.yrel) SDL_PushEvent(&event);
+}
+#else
+static void ioskeyboardoverlayupdate() {}
+#endif
+
 int keyrepeatmask = 0, textinputmask = 0; // bunches of flags for the same functions
 Uint32 textinputtime = 0;
 
@@ -757,6 +968,10 @@ void textinput(bool on, int mask)
         if(!textinputmask)
         {
             SDL_StartTextInput();
+#if defined(AC_PLATFORM_IOS)
+            ioskeyboardvisible = true;
+            ioskeyboardoverlayupdate();
+#endif
             textinputtime = SDL_GetTicks();
         }
         textinputmask |= mask;
@@ -764,7 +979,14 @@ void textinput(bool on, int mask)
     else
     {
         textinputmask &= ~mask;
-        if(!textinputmask) SDL_StopTextInput();
+        if(!textinputmask)
+        {
+            SDL_StopTextInput();
+#if defined(AC_PLATFORM_IOS)
+            ioskeyboardvisible = false;
+            ioskeyboardoverlayupdate();
+#endif
+        }
     }
 }
 
@@ -855,12 +1077,34 @@ void checkinput()
 
         EVENTDEBUG(int thres = 1; defformatstring(eb)("EVENT %d", event.type));
 
+#if defined(AC_PLATFORM_IOS)
+        if (focused && event.type != SDL_WINDOWEVENT)
+        {
+            bool wantgrab = focused > 0 && !iosmenumode;
+            if(grabinput != wantgrab) inputgrab(grabinput = wantgrab, shouldgrab);
+            focused = 0;
+        }
+#else
         if (focused && event.type != SDL_WINDOWEVENT) { if (grabinput != (focused > 0)) inputgrab(grabinput = focused > 0, shouldgrab); focused = 0; }
+#endif
 
         switch(event.type)
         {
             case SDL_QUIT:
                 quit();
+                break;
+
+            // UIKit lifecycle notifications are delivered through SDL_APP_* events.
+            // Stop rendering while iOS backgrounds the app, then refresh drawable
+            // dimensions before resuming after the app becomes active again.
+            case SDL_APP_WILLENTERBACKGROUND:
+                inputgrab(false);
+                minimized = 1;
+                break;
+
+            case SDL_APP_DIDENTERFOREGROUND:
+                minimized = 0;
+                updatescreensize();
                 break;
 
             case SDL_KEYDOWN:
@@ -966,11 +1210,24 @@ void checkinput()
                     resetmousemotion();
                     tdx+=dx;tdy+=dy;
                 }
+#if defined(AC_PLATFORM_IOS)
+                else if (shouldgrab && !iosmenumode) inputgrab(grabinput = true);
+#else
                 else if (shouldgrab) inputgrab(grabinput = true);
+#endif
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
+#if defined(AC_PLATFORM_IOS)
+                // SDL also reports finger taps as synthetic mouse buttons. Keep
+                // touch-derived mouse motion for aiming, but never treat a raw
+                // screen tap/swipe as the FIRE action. The HUD FIRE button sends
+                // its own event, whose 'which' is not SDL_TOUCH_MOUSEID.
+                if(event.button.which == SDL_TOUCH_MOUSEID) break;
+                if(!grabinput && !iosmenumode) // click-to-grab only in explicit Aim mode
+#else
                 if(!grabinput) // click-to-grab
+#endif
                 {
                     EVENTDEBUG(concatformatstring(eb, "(SDL_MOUSEBUTTONDOWN) button %d, state %d, clicks %d, x %d, y %d", event.button.button, event.button.state, event.button.clicks, event.button.x, event.button.y));
                     inputgrab(grabinput = true);
@@ -990,6 +1247,9 @@ void checkinput()
                 }
 
             case SDL_MOUSEBUTTONUP:
+#if defined(AC_PLATFORM_IOS)
+                if(event.button.which == SDL_TOUCH_MOUSEID) break;
+#endif
                 EVENTDEBUG(concatformatstring(eb, "(SDL_MOUSEBUTTON%s) button %d, state %d, clicks %d, x %d, y %d", event.type == SDL_MOUSEBUTTONUP ? "UP" : "DOWN", event.button.button, event.button.state, event.button.clicks, event.button.x, event.button.y));
                 if(lasttype==event.type && lastbut==event.button.button) break;
                 keypress(-(event.button.button > 3 ? (event.button.button + 4) : event.button.button), 0, event.button.state != SDL_RELEASED);
@@ -1183,6 +1443,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 
 void initclientlog()  // rotate old logfiles and create new one
 {
+#if defined(AC_PLATFORM_IOS)
+    // Do not persist client diagnostics on iOS; avoid growing Documents storage.
+    clientlogfile = NULL;
+    DELETEP(bootclientlog);
+#else
     filerotate("clientlog", "txt", 5); // keep five old logfiles
     clientlogfile = openfile("clientlog.txt", "w");
     if(clientlogfile)
@@ -1191,6 +1456,7 @@ void initclientlog()  // rotate old logfiles and create new one
     }
     else conoutf("could not create logfile \"%s\"", findfile("clientlog.txt", "w"));
     DELETEP(bootclientlog);
+#endif
 }
 
 #ifdef _DEBUG
@@ -1207,6 +1473,47 @@ void sanitychecks()
 
 int main(int argc, char **argv)
 {
+#if defined(AC_PLATFORM_IOS)
+    clear_iosstartup_log();
+    iosstartup_log("START: engine main() entered");
+    // Import/validate assets before any engine configuration or texture loading.
+    // This runs inside SDL's existing UIKit lifecycle and does not create a second app entry point.
+    iosstartup_log("startup: checking Documents/GameData before SDL engine startup");
+    if(ac_ios_ensure_game_data() != 0)
+    {
+        iosstartup_log("startup: game-data preflight cancelled or failed");
+        return EXIT_FAILURE;
+    }
+    iosstartup_log("startup: game-data preflight complete");
+    // The importer and game target deliberately share the same bundle identifier,
+    // so an app update retains Documents/GameData imported by the previous IPA.
+    // Supply the sandbox paths before AssaultCube parses its normal CLI options.
+    const char *ios_home = getenv("HOME");
+    if(ios_home && *ios_home)
+    {
+        bool has_home_arg = false, has_mod_arg = false;
+        for(int i = 1; i < argc; ++i)
+        {
+            if(!strcmp(argv[i], "--home") || !strncmp(argv[i], "--home=", 7)) has_home_arg = true;
+            if(!strncmp(argv[i], "--mod=", 6)) has_mod_arg = true;
+        }
+        static char ios_home_arg[4096], ios_mod_arg[4096];
+        char **expanded_argv = (char **)calloc((size_t)argc + 3, sizeof(char *));
+        if(expanded_argv)
+        {
+            int expanded_argc = 0;
+            for(int i = 0; i < argc; ++i) expanded_argv[expanded_argc++] = argv[i];
+            if(!has_home_arg && snprintf(ios_home_arg, sizeof(ios_home_arg), "--home=%s/Documents/Profile", ios_home) > 0)
+                expanded_argv[expanded_argc++] = ios_home_arg;
+            if(!has_mod_arg && snprintf(ios_mod_arg, sizeof(ios_mod_arg), "--mod=%s/Documents/GameData", ios_home) > 0)
+                expanded_argv[expanded_argc++] = ios_mod_arg;
+            expanded_argv[expanded_argc] = NULL;
+            argv = expanded_argv;
+            argc = expanded_argc;
+        }
+    }
+#endif
+    iosstartup_log("startup: arguments prepared");
     DEBUGCODE(sanitychecks());
     extern struct servercommandline scl;
     #ifdef WIN32
@@ -1227,6 +1534,7 @@ int main(int argc, char **argv)
     char *initscript = NULL;
     char *initdemo = NULL;
 
+    iosstartup_log("startup: locale and logging initialization");
     setlocale(LC_ALL, "POSIX");
     if(bootclientlog) cvecprintf(*bootclientlog, "######## start logging: %s\n", timestring(true));
 
@@ -1247,6 +1555,9 @@ int main(int argc, char **argv)
     if(*stream_capabilities()) clientlogf("info: %s", stream_capabilities());
 
     bool waitforauth = false;
+#if defined(AC_PLATFORM_IOS)
+    bool ios_first_run = false;
+#endif
     initing = INIT_RESET;
     for(int i = 1; i<argc; i++)
     {
@@ -1341,7 +1652,9 @@ int main(int argc, char **argv)
 #ifdef _DEBUG
     par = SDL_INIT_NOPARACHUTE;
 #endif
+    iosstartup_log("startup: SDL_Init requested");
     if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|par)<0) fatal("Unable to initialize SDL");
+    iosstartup_log("startup: SDL_Init succeeded");
     SDL_version sdlver;
     SDL_GetVersion(&sdlver);
     if(SDL_COMPILEDVERSION != SDL_VERSIONNUM(sdlver.major, sdlver.minor, sdlver.patch))
@@ -1352,23 +1665,35 @@ int main(int argc, char **argv)
 #endif
 
     if (!dedicated) initlog("net (" STRINGIFY(ENET_VERSION_MAJOR) "." STRINGIFY(ENET_VERSION_MINOR) "." STRINGIFY(ENET_VERSION_PATCH) ")");
+    iosstartup_log("startup: ENet initialize");
     if(enet_initialize()<0) fatal("Unable to initialise network module");
+    iosstartup_log("startup: ENet initialized");
 
+    iosstartup_log("startup: initclient begin");
     if (!dedicated) initclient();
+    iosstartup_log("startup: initclient done");
 
+    iosstartup_log("startup: initserver begin");
     initserver(dedicated);  // never returns if dedicated
+    iosstartup_log("startup: initserver returned");
 
     initlog("world (" STRINGIFY(AC_VERSION) ")");
+    iosstartup_log("startup: empty_world");
     empty_world(7, true);
 
     initlog("video: sdl");
+    iosstartup_log("video: SDL_InitSubSystem requested");
     if(SDL_InitSubSystem(SDL_INIT_VIDEO)<0) fatal("Unable to initialize SDL Video");
+    iosstartup_log("video: SDL_InitSubSystem succeeded");
 
     initlog("video: mode");
     int useddepthbits = 0, usedfsaa = 0;
+    iosstartup_log("video: setupscreen begin");
     setupscreen(useddepthbits, usedfsaa);
+    iosstartup_log("video: setupscreen complete");
 
     initlog("video: misc");
+    iosstartup_log("video: misc initialization begin");
 
 #ifndef __APPLE__
     SDL_Surface *icon = IMG_Load("packages/misc/icon.png");
@@ -1383,16 +1708,23 @@ int main(int argc, char **argv)
     SDL_ShowCursor(0);
 
     initlog("gl");
+    iosstartup_log("video: OpenGL extension check begin");
     gl_checkextensions();
+    iosstartup_log("video: OpenGL extension check complete");
+    iosstartup_log("video: gl_init begin");
     gl_init(screenw, screenh, useddepthbits, usedfsaa);
+    iosstartup_log("video: gl_init complete");
 
+    iosstartup_log("video: core texture load begin");
     notexture = noworldtexture = textureload("packages/misc/notexture.jpg");
+    iosstartup_log("startup: core texture load attempted");
     if(!notexture) fatal("could not find core textures (hint: run AssaultCube from the parent of the bin directory)");
 
     initlog("console");
     updateigraphs();
     autostartscripts("_veryfirst_");
     // Main font file, all other font files execute from here.
+    iosstartup_log("startup: font config load");
     if(!execfile("config/font.cfg")) fatal("cannot find default font definitions");
     // Check these 2 standard fonts have been executed.
     if(!setfont("mono")) fatal("no mono font specified");
@@ -1403,6 +1735,7 @@ int main(int argc, char **argv)
     particleinit();
 
     initlog("sound");
+    iosstartup_log("startup: audio init");
     audiomgr.initsound();
 
     initlog("cfg");
@@ -1459,6 +1792,9 @@ int main(int argc, char **argv)
     initing = INIT_LOAD;
     if(!execfile("config/saved.cfg"))
     {
+#if defined(AC_PLATFORM_IOS)
+        ios_first_run = true;
+#endif
         exec("config/defaults.cfg");
         bootstrapentropy += 5 + rnd(7);
     }
@@ -1472,6 +1808,12 @@ int main(int argc, char **argv)
     autostartscripts("");    // all remaining scripts
     execfile("config/autoexec.cfg");
     exechook(HOOK_SP_MP, "autoexec", "");
+#if defined(AC_PLATFORM_IOS)
+    // Use the highest iOS-safe quality profile on first launch only. Users can
+    // subsequently change it and their chosen values are saved in Profile.
+    if(ios_first_run) execute("new_gfx_quality 6");
+    iosprofileinitialized = true;
+#endif
 
 
 
@@ -1501,6 +1843,7 @@ int main(int argc, char **argv)
     else
     copystring(clientmap, initmap); // ac_complex for 1.0, ac_shine for 1.1, ..
 
+    iosstartup_log("startup: localconnect");
     localconnect();
 
     if(initscript) execute(initscript);
@@ -1509,6 +1852,7 @@ int main(int argc, char **argv)
 
     inputgrab(grabinput = true);
 
+    iosstartup_log("startup: main loop reached");
     inmainloop = true;
     static bool onceauthed = true;
 #ifdef _DEBUG
@@ -1554,23 +1898,72 @@ int main(int argc, char **argv)
         totalmillis = millis;
 
         checkinput();
+#if defined(AC_PLATFORM_IOS)
+        // Keep the UIKit controls synchronized with AssaultCube's real menu
+        // state. Menu navigation appears while a menu is open; the FPS HUD
+        // appears automatically as soon as the game returns to play.
+        {
+            const bool menu_now = menuvisible();
+            if(menu_now != ioslastmenuvisible)
+            {
+                ioslastmenuvisible = menu_now;
+                iosmenumode = menu_now;
+                inputgrab(grabinput = !iosmenumode);
+                ioskeyboardoverlayupdate();
+            }
+        }
+        if(frames < 8) iosstartup_log("frame: input processing complete");
+#endif
 
         if(lastmillis) updateworld(curtime, lastmillis);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: world update complete");
+#endif
 
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: after world update; before autoscreenshot");
+#endif
         if(needsautoscreenshot) showscores(true);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: autoscreenshot handling complete");
+#endif
 
         serverslice(0);
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: serverslice complete");
+#endif
 
         if(elapsed) fps = (1000.0f/elapsed+fps*10)/11; // avoid DIV-by-0
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: fps calculation complete");
+#endif
         frames++;
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: counter increment complete; before audio");
+#endif
 
         audiomgr.updateaudio();
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: audio update complete");
+#endif
 
         computeraytable(camera1->o.x, camera1->o.y, dynfov());
+#if defined(AC_PLATFORM_IOS)
+        if(frames < 8) iosstartup_log("frame: ray table complete");
+#endif
         if(frames>3 && !minimized)
         {
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: gl_drawframe begin");
+#endif
             gl_drawframe(screenw, screenh, fps<lowfps ? fps/lowfps : (fps>highfps ? fps/highfps : 1.0f), fps, elapsed);
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: gl_drawframe complete");
+#endif
             if(frames>4) SDL_GL_SwapWindow(screen);
+#if defined(AC_PLATFORM_IOS)
+            if(frames < 8) iosstartup_log("frame: buffer swap complete");
+#endif
         }
 
         if(needsautoscreenshot)

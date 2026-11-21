@@ -3,6 +3,8 @@
 
 #include "cube.h"
 
+
+
 #ifdef STANDALONE
 #define DEBUGCOND (true)
 #else
@@ -428,6 +430,7 @@ void cleanworldstate(ENetPacket *packet)
    }
 }
 
+
 void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacket)
 {
     if(n<0)
@@ -677,10 +680,14 @@ savedscore *findscore(client &c, bool insert)
 
 void sendf(int cn, int chan, const char *format, ...)
 {
+    bool tracecontinuation = format && !strcmp(format, "rii");
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: continuation entered cn=%d chan=%d", cn, chan);
     int exclude = -1;
     bool reliable = false;
     if(*format=='r') { reliable = true; ++format; }
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before packetbuf allocation");
     packetbuf p(MAXTRANS, reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: packetbuf allocated");
     va_list args;
     va_start(args, format);
     while(*format) switch(*format++)
@@ -705,7 +712,13 @@ void sendf(int cn, int chan, const char *format, ...)
         case 'i': // one to nine integer arguments
         {
             int n = isdigit(*format) ? *format++-'0' : 1;
-            loopi(n) putint(p, va_arg(args, int));
+            loopi(n)
+            {
+                int value = va_arg(args, int);
+                if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before putint value=%d", value);
+                putint(p, value);
+                if(tracecontinuation) mlog(ACLOG_INFO, "sendf: putint returned");
+            }
             break;
         }
 
@@ -736,7 +749,12 @@ void sendf(int cn, int chan, const char *format, ...)
         }
     }
     va_end(args);
-    sendpacket(cn, chan, p.finalize(), exclude);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before finalize");
+    ENetPacket *outpacket = p.finalize();
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: finalize returned packet=%p", (void *)outpacket);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: before sendpacket");
+    sendpacket(cn, chan, outpacket, exclude);
+    if(tracecontinuation) mlog(ACLOG_INFO, "sendf: sendpacket returned");
 }
 
 void sendservmsg(const char *msg, int cn = -1)
@@ -2919,7 +2937,14 @@ void welcomeinitclient(packetbuf &p, int exclude = -1)
 
 void welcomepacket(packetbuf &p, int n)
 {
-    if(!sg->smapname[0]) maprot.next(false);
+    if(!sg->smapname[0])
+    {
+        // The local server can receive its first SV_CONNECT before any map has
+        // been selected. In local mode maprot.next() reuses getclientmap(),
+        // which is empty on first launch and makes startgame() abort. Start a
+        // known stock map instead, then build the welcome packet from that state.
+        startgame("ac_desert", getclientmode(), -1, false);
+    }
 
     client *c = valid_client(n) ? clients[n] : NULL;
     int numcl = numclients();
@@ -2996,7 +3021,8 @@ void sendwelcome(client *cl, int chan)
 {
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
     welcomepacket(p, cl->clientnum);
-    sendpacket(cl->clientnum, chan, p.finalize());
+    ENetPacket *welcome = p.finalize();
+    sendpacket(cl->clientnum, chan, welcome);
     cl->haswelcome = true;
 }
 
@@ -3082,52 +3108,72 @@ int deferredprocessingthread(void *nop)
 void polldeferredprocessing()
 {
     static void *deferredprocessingthread_ti = NULL;
-    if(!deferredprocessingthread_ti) deferredprocessingthread_ti = sl_createthread(deferredprocessingthread, NULL);
+    if(!deferredprocessingthread_ti)
+    {
+        deferredprocessingthread_ti = sl_createthread(deferredprocessingthread, NULL);
+    }
 
     if(servinfoauth_done)
     {
         servinfoauth *sa = (servinfoauth *)servinfoauth_dropbox;
         servinfoauth_done = false;
-        switch(sa->type)
+        if(sa && sa->cn >= 0 && clients.inrange(sa->cn) && clients[sa->cn])
         {
-            case SV_SERVINFO_RESPONSE:
+            switch(sa->type)
             {
-                if(clients[sa->cn]->clientsequence == sa->clientsequence) // make sure, it's still the same client using that cn
+                case SV_SERVINFO_RESPONSE:
                 {
-                    if(!sa->success) disconnect_client(sa->cn, DISC_AUTH);
-                    else
-                    { // continue connecting
-                        client *cl = clients[sa->cn];
-                        if(sa->wantauth)
+                    if(clients[sa->cn]->clientsequence == sa->clientsequence)
+                    {
+                        if(!sa->success)
                         {
-                            memcpy(cl->pubkey.u, sa->clientpubkey, 32);
-                            memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
-                            bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
-                            cl->vita = vitas.access(cl->pubkey);
-                            if(!cl->vita)
-                            {
-                                vita_s v;
-                                memset(&v, 0, sizeof(v));
-                                cl->vita = &vitas.access(cl->pubkey, v);
-                                cl->vita->vs[VS_FIRSTLOGIN] = servclock;
-                            }
-                            if(cl->country[0] != '-') cl->vita->addcc(cl->country);
-                            cl->vita->addip(cl->ip);
-                            cl->vita->vs[VS_LASTLOGIN] = servclock;
-                            cl->needsauth = true; // may have been voluntary, but it's done
-                            int datecodes = 0, *vs = cl->vita->vs;
-                            loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
-                            sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
+                            disconnect_client(sa->cn, DISC_AUTH);
                         }
-                        else sendf(sa->cn, 1, "rii", SV_SERVINFO_CONTD, 0);
+                        else
+                        {
+                            client *cl = clients[sa->cn];
+                            if(sa->wantauth)
+                            {
+                                memcpy(cl->pubkey.u, sa->clientpubkey, 32);
+                                memcpy(cl->servinforesponse, sa->clientmsg, sa->clientmsglen + 64);
+                                bin2hex(cl->pubkeyhex, cl->pubkey.u, 32);
+                                cl->vita = vitas.access(cl->pubkey);
+                                if(!cl->vita)
+                                {
+                                    vita_s v;
+                                    memset(&v, 0, sizeof(v));
+                                    cl->vita = &vitas.access(cl->pubkey, v);
+                                    cl->vita->vs[VS_FIRSTLOGIN] = servclock;
+                                }
+                                if(cl->country[0] != '-') cl->vita->addcc(cl->country);
+                                cl->vita->addip(cl->ip);
+                                cl->vita->vs[VS_LASTLOGIN] = servclock;
+                                cl->needsauth = true;
+                                int datecodes = 0, *vs = cl->vita->vs;
+                                loopi(VS_NUMCOUNTERS) datecodes |= vs[i] == 1 || (servclock - vs[i]) < 0 ? (1 << i) : 0;
+                                sendf(sa->cn, 1, "riimiss", SV_SERVINFO_CONTD, 1, 64, sa->servermsg, datecodes, cl->vita->clan, cl->vita->publiccomment);
+                            }
+                            else
+                            {
+                                packetbuf continuation(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+                                putint(continuation, SV_SERVINFO_CONTD);
+                                putint(continuation, 0);
+                                ENetPacket *continuationpacket = continuation.finalize();
+                                sendpacket(sa->cn, 1, continuationpacket);
+                            }
+                        }
                     }
+                    break;
                 }
-                break;
+                default:
+                    break;
             }
         }
-        delete sa;
+        if(sa) delete sa;
+        servinfoauth_dropbox = NULL;
     }
     if(!servinfoauths.empty() && servinfoauth_deferred.getvalue() < 1) servinfoauth_deferred.post();
+
 }
 
 // server side processing of updates: does very little and most state is tracked client only
@@ -4600,7 +4646,10 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
     polldeferredprocessing();
     checkdemotransmissions();
 
-    if(!isdedicated) return;     // below is network only
+    if(!isdedicated) {
+        return;
+    }
+
 
     poll_serverthreads(); // read config and map files in the background, process the results in the main thread
 
@@ -4695,6 +4744,7 @@ void serverslice(uint timeout)   // main server update, called from cube main lo
         }
     }
     sendworldstate();
+
 }
 
 void cleanupserver()

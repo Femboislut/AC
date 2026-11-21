@@ -3,6 +3,7 @@
 #include "cube.h"
 #include "bot/bot.h"
 
+
 VAR(connected, 1, 0, 0);
 
 ENetHost *clienthost = NULL;
@@ -512,6 +513,10 @@ int getbuildtype()
 
 void sendintro()
 {
+    if(!player1)
+    {
+        return;
+    }
     packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
     putint(p, SV_CONNECT);
     putint(p, AC_VERSION);
@@ -520,15 +525,22 @@ void sendintro()
     sendstring(genpwdhash(player1->name, clientpassword, sessionid), p);
     sendstring(!lang || strlen(lang) != 2 ? "" : lang, p);
     putint(p, connectrole);
-    clientpassword[0] = '\0';
+    clientpassword[0] = '\\0';
     connectrole = CR_DEFAULT;
-    putint(p, player1->nextprimweap->type);
+
+    weapon *introprimary = player1->nextprimweap;
+    if(!introprimary) introprimary = player1->primweap;
+    if(!introprimary) introprimary = player1->weapons[GUN_ASSAULT];
+    int introprimarytype = introprimary ? introprimary->type : GUN_ASSAULT;
+    putint(p, introprimarytype);
+
     loopi(2) putint(p, player1->skin(i));
     putint(p, player1->maxroll);
     putint(p, player1->maxrolleffect);
     putint(p, player1->ffov);
     putint(p, player1->scopefov);
-    sendpackettoserv(1, p.finalize());
+    ENetPacket *introPacket = p.finalize();
+    sendpackettoserv(1, introPacket);
 }
 
 void gets2c()           // get updates from the server

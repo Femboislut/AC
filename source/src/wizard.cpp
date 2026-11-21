@@ -181,7 +181,13 @@ int wizardmain(int argc, char **argv)
     fgetc(stdin);
     printf("Starting the AC server ...\n");
     argstr.insert(0, relpath, strlen(relpath));
+#if defined(AC_PLATFORM_IOS)
+    // iOS does not support launching server processes through the shell.
+    // The server wizard is a desktop-only utility and is not used by the iOS client.
+    printf("Server process launching is unavailable on iOS.\\n");
+#else
     system(argstr.getbuf());
+#endif
 
     return EXIT_SUCCESS;
 }

@@ -38,6 +38,27 @@
     #define NO_POSIX_R
 #endif
 
+#ifdef __APPLE__
+    #include <TargetConditionals.h>
+#endif
+
+#if defined(TARGET_OS_IOS) && TARGET_OS_IOS
+    // Keep SDL's platform and event APIs available: the engine uses SDL types
+    // throughout, including texture loading via SDL_image.
+    #define AC_PLATFORM_IOS 1
+    #include <SDL.h>
+    #include <SDL_image.h>
+    // Use GL4ES's desktop-compatible OpenGL headers. They map the engine's
+    // fixed-function calls to GL4ES symbols backed by the current GLES context.
+    #include <GL/gl.h>
+    #include <GL/glext.h>
+    #include <gl4esinit.h>
+    #include <OpenAL/al.h>
+    #include <OpenAL/alc.h>
+    #include <vorbis/vorbisfile.h>
+    #define MOD_KEYS_CTRL (KMOD_LGUI|KMOD_RGUI)
+    #include <setjmp.h>
+#else
 #ifndef STANDALONE
     #include <SDL.h>
     #include <SDL_image.h>
@@ -45,7 +66,7 @@
     #ifdef __APPLE__
         #undef SDL_VIDEO_DRIVER_WINDOWS
     #endif
-	#include <SDL_syswm.h>
+    #include <SDL_syswm.h>
 
     #define GL_GLEXT_LEGACY
     #define __glext_h__
@@ -68,6 +89,7 @@
     #endif
 
     #include <setjmp.h>
+#endif
 #endif
 
 #if defined(WIN32) || defined(__APPLE__) || !defined(STANDALONE) || defined(AC_FORCE_SDL_THREADS)

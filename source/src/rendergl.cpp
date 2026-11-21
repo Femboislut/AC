@@ -3,6 +3,10 @@
 #include "cube.h"
 #include "bot/bot.h"
 
+#if defined(AC_PLATFORM_IOS)
+extern void iosstartup_log(const char *message);
+#endif
+
 bool hasTE = false, hasMT = false, hasMDA = false, hasDRE = false, hasstencil = false, hasST2 = false, hasSTW = false, hasSTS = false, hasAF;
 
 // GL_ARB_multitexture
@@ -58,19 +62,32 @@ void gl_checkextensions()
     conoutf("Renderer: %s (%s)", renderer, vendor);
     conoutf("Driver: %s", version);
 
+    // GL4ES is the compatibility layer used on iOS. Match AssaultCube's
+    // proven Android mobile path and avoid optional desktop extension calls.
+    const bool gl4es =
+#if defined(__ANDROID__) || defined(AC_PLATFORM_IOS)
+        true;
+#else
+        false;
+#endif
+
     if(hasext(exts, "GL_EXT_texture_env_combine") || hasext(exts, "GL_ARB_texture_env_combine")) hasTE = true;
     else conoutf("WARNING: cannot use overbright lighting, using old lighting model!");
 
-    if(hasext(exts, "GL_ARB_multitexture"))
+    if(hasext(exts, "GL_ARB_multitexture") && !gl4es)
     {
         glActiveTexture_       = (PFNGLACTIVETEXTUREARBPROC)      getprocaddress("glActiveTextureARB");
         glClientActiveTexture_ = (PFNGLCLIENTACTIVETEXTUREARBPROC)getprocaddress("glClientActiveTextureARB");
         glMultiTexCoord2f_     = (PFNGLMULTITEXCOORD2FARBPROC)    getprocaddress("glMultiTexCoord2fARB");
         glMultiTexCoord3f_     = (PFNGLMULTITEXCOORD3FARBPROC)    getprocaddress("glMultiTexCoord3fARB");
-        hasMT = true;
+        hasMT = glActiveTexture_ && glClientActiveTexture_ && glMultiTexCoord2f_ && glMultiTexCoord3f_;
+#if defined(AC_PLATFORM_IOS)
+        extern void iosstartup_log(const char *message);
+        iosstartup_log(hasMT ? "OpenGL: multitexture entry points resolved" : "OpenGL: multitexture extension present but required entry points are missing; disabling multitexture");
+#endif
     }
 
-    if(hasext(exts, "GL_EXT_multi_draw_arrays"))
+    if(hasext(exts, "GL_EXT_multi_draw_arrays") && !gl4es)
     {
         glMultiDrawArrays_   = (PFNGLMULTIDRAWARRAYSEXTPROC)  getprocaddress("glMultiDrawArraysEXT");
         glMultiDrawElements_ = (PFNGLMULTIDRAWELEMENTSEXTPROC)getprocaddress("glMultiDrawElementsEXT");
@@ -79,28 +96,28 @@ void gl_checkextensions()
         if(strstr(vendor, "ATI") || strstr(renderer, "Mesa") || strstr(version, "Mesa")) ati_mda_bug = 1;
     }
 
-    if(hasext(exts, "GL_EXT_draw_range_elements"))
+    if(hasext(exts, "GL_EXT_draw_range_elements") && !gl4es)
     {
         glDrawRangeElements_ = (PFNGLDRAWRANGEELEMENTSEXTPROC)getprocaddress("glDrawRangeElementsEXT");
         hasDRE = true;
     }
 
-    if(hasext(exts, "GL_EXT_stencil_two_side"))
+    if(hasext(exts, "GL_EXT_stencil_two_side") && !gl4es)
     {
         glActiveStencilFace_ = (PFNGLACTIVESTENCILFACEEXTPROC)getprocaddress("glActiveStencilFaceEXT");
         hasST2 = true;
     }
 
-    if(hasext(exts, "GL_ATI_separate_stencil"))
+    if(hasext(exts, "GL_ATI_separate_stencil") && !gl4es)
     {
         glStencilOpSeparate_   = (PFNGLSTENCILOPSEPARATEATIPROC)  getprocaddress("glStencilOpSeparateATI");
         glStencilFuncSeparate_ = (PFNGLSTENCILFUNCSEPARATEATIPROC)getprocaddress("glStencilFuncSeparateATI");
         hasSTS = true;
     }
 
-    if(hasext(exts, "GL_EXT_stencil_wrap")) hasSTW = true;
+    if(hasext(exts, "GL_EXT_stencil_wrap") && !gl4es) hasSTW = true;
 
-    if(hasext(exts, "GL_EXT_texture_filter_anisotropic"))
+    if(hasext(exts, "GL_EXT_texture_filter_anisotropic") && !gl4es)
     {
        GLint val;
        glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &val);
@@ -108,7 +125,7 @@ void gl_checkextensions()
        hasAF = true;
     }
 
-    if(!hasext(exts, "GL_ARB_fragment_program"))
+    if(!hasext(exts, "GL_ARB_fragment_program") && !gl4es)
     {
         // not a required extension, but ensures the card has enough power to do reflections
         extern int waterreflect, waterrefract;
@@ -127,30 +144,56 @@ void gl_checkextensions()
 
 void gl_init(int w, int h, int depth, int fsaa)
 {
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    iosstartup_log("gl_init: entered");
+#endif
     //#define fogvalues 0.5f, 0.6f, 0.7f, 1.0f
 
     glViewport(0, 0, w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: glViewport complete");
+#endif
     glClearDepth(1.0);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: glClearDepth complete");
+#endif
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: depth and shade state complete");
+#endif
 
     glEnable(GL_FOG);
     glFogi(GL_FOG_MODE, GL_LINEAR);
     glFogf(GL_FOG_DENSITY, 0.25);
     glHint(GL_FOG_HINT, GL_NICEST);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: fog state complete");
+#endif
 
     glEnable(GL_LINE_SMOOTH);
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: line state complete");
+#endif
 
     glCullFace(GL_FRONT);
     glEnable(GL_CULL_FACE);
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: cull state complete");
+    iosstartup_log("gl_init: inittmus begin");
+#endif
     inittmus();
-
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: inittmus complete");
+    iosstartup_log("gl_init: resetcamera begin");
+#endif
     resetcamera();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("gl_init: resetcamera complete");
+#endif
 }
 
 FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
@@ -703,6 +746,9 @@ void drawreflection(float hf, int w, int h, float changelod, bool refract)
     glMatrixMode(GL_MODELVIEW);
 
     renderstripssky();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: sky strips complete");
+#endif
 
     glPushMatrix();
     glLoadIdentity();
@@ -722,6 +768,9 @@ void drawreflection(float hf, int w, int h, float changelod, bool refract)
     setuptmu(0, "T * P x 2");
 
     renderstrips();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: world strips complete");
+#endif
     rendermapmodels();
     renderentities();
     renderclients();
@@ -803,7 +852,14 @@ COMMAND(clearminimap, "");
 VARFP(minimapres, 7, 9, 10, clearminimap());
 void drawminimap(int w, int h)
 {
-    if(!minimapdirty) return;
+#if defined(AC_PLATFORM_IOS)
+    // The legacy minimap renderer performs a second full world render into an
+    // off-screen texture. On the iOS GLES/GL4ES path this can crash during the
+    // first frame even after the main world has been installed. Defer this
+    // optional feature on iOS; the main scene does not depend on the minimap.
+    return;
+#else
+    if(!maploaded || !minimapdirty) return;
     int size = 1<<minimapres, sizelimit = min(hwtexsize, min(w, h));
     while(size > sizelimit) size /= 2;
     if(size!=minimaplastsize && minimaptex)
@@ -887,6 +943,7 @@ void drawminimap(int w, int h)
     glDisable(GL_TEXTURE_2D);
     glViewport(0, 0, w, h);
     glClearDepth(1.0);
+#endif
 }
 
 void cleanupgl()
@@ -999,16 +1056,138 @@ float depthcorrect(float d)
 // sadly many very old cards and drivers appear to fuck up on glReadPixels() and give false
 // coordinates, making shooting and such impossible.
 // also hits map entities which is unwanted.
-// could be replaced by a more acurate version of monster.cpp los() if needed
+// could be replaced by a more accurate version of monster.cpp los() if needed.
+
+#if defined(AC_PLATFORM_IOS)
+
+// GLES2 does not provide the depth-buffer readback used by the desktop implementation.
+// Trace the crosshair ray through the map instead. This is adapted from the upstream
+// acmobile implementation (which uses the same fallback for GL4ES on Android).
+static bool ios_line_of_sight(float stepdiv, float lx, float ly, float lz,
+                              float bx, float by, float bz, vec &hit)
+{
+    if(OUTBORD((int)lx, (int)ly) || OUTBORD((int)bx, (int)by)) return false;
+
+    float dx = bx-lx, dy = by-ly;
+    int steps = (int)(sqrtf(dx*dx + dy*dy)/stepdiv);
+    if(!steps) return false;
+
+    float x = lx, y = ly;
+    int i = 0;
+    while(i < steps)
+    {
+        sqr *s = S((int)x, (int)y);
+        if(SOLID(s)) break;
+
+        float floor = s->floor;
+        if(s->type == FHF) floor -= s->vdelta/4.0f;
+        float ceil = s->ceil;
+        if(s->type == CHF) ceil += s->vdelta/4.0f;
+
+        float z = lz - ((lz-bz)*(i/(float)steps));
+        if(z < floor || z > ceil) break;
+
+        hit = vec(x, y, z);
+        x += dx/(float)steps;
+        y += dy/(float)steps;
+        ++i;
+    }
+    return i >= steps;
+}
+
+static bool ios_intersects_mapmodel(entity *e, const vec &from, const vec &to)
+{
+    mapmodelinfo *mmi = getmminfo(e->attr2);
+    if(!mmi || OUTBORD(e->x, e->y)) return false;
+
+    float z = (float)S(e->x, e->y)->floor + mmi->zoff + e->attr3 + mmi->h/2;
+    float radius = mmi->rad;
+    vec closest = to, center((float)e->x, (float)e->y, z), delta(to);
+    delta.sub(from);
+    vec offset(center);
+    offset.sub(from);
+
+    float projection = offset.dot(delta);
+    const vec *point = &from;
+    if(projection > 0)
+    {
+        float lengthSquared = delta.dot(delta);
+        if(projection >= lengthSquared) point = &to;
+        else
+        {
+            float t = projection/lengthSquared;
+            closest = delta;
+            closest.mul(t);
+            closest.add(from);
+            point = &closest;
+        }
+    }
+
+    return point->x <= center.x+radius && point->x >= center.x-radius
+        && point->y <= center.y+radius && point->y >= center.y-radius
+        && point->z <= center.z+mmi->h/2 && point->z >= center.z-mmi->h/2;
+}
+
+#endif
 
 void readdepth(int w, int h, vec &pos)
 {
+#if defined(AC_PLATFORM_IOS)
+    float yaw = player1->yaw-90, pitch = -player1->pitch;
+    float sinYaw = sinf(RAD*yaw), cosYaw = cosf(RAD*yaw);
+    float sinPitch = sinf(RAD*pitch), cosPitch = cosf(RAD*pitch);
+    vec direction(cosPitch*cosYaw, cosPitch*sinYaw, -sinPitch);
+    // Stop the ray just inside the map boundary. ios_line_of_sight() rejects
+    // out-of-bounds endpoints, so an arbitrary long endpoint would never be traced.
+    const float minCoordinate = MINBORD + 0.5f;
+    const float maxCoordinate = ssize - MINBORD - 1.0f;
+    float rayDistance = (float)ssize*2.0f;
+    if(direction.x > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.x)/direction.x);
+    else if(direction.x < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.x)/direction.x);
+    if(direction.y > 1e-6f) rayDistance = min(rayDistance, (maxCoordinate-player1->o.y)/direction.y);
+    else if(direction.y < -1e-6f) rayDistance = min(rayDistance, (minCoordinate-player1->o.y)/direction.y);
+    rayDistance = max(rayDistance, 0.05f);
+
+    vec endpoint(direction);
+    endpoint.mul(rayDistance);
+    endpoint.add(player1->o);
+
+    vec hit = player1->o;
+    ios_line_of_sight(0.05f, player1->o.x, player1->o.y, player1->o.z,
+                      endpoint.x, endpoint.y, endpoint.z, hit);
+
+    direction = hit;
+    direction.sub(player1->o);
+    float horizontalDistance = sqrtf(direction.x*direction.x + direction.y*direction.y);
+    if(horizontalDistance <= 1e-4f)
+    {
+        pos = player1->o;
+        return;
+    }
+
+    direction.mul(1.0f/horizontalDistance);
+    float distance = horizontalDistance;
+    loopv(ents)
+    {
+        entity &e = ents[i];
+        if(e.type != MAPMODEL) continue;
+        vec entityOrigin((float)e.x, (float)e.y, (float)e.z);
+        float entityDistance = player1->o.dist(entityOrigin);
+        if(entityDistance < distance && ios_intersects_mapmodel(&e, player1->o, hit))
+            distance = entityDistance;
+    }
+
+    direction.mul(distance);
+    direction.add(player1->o);
+    pos = direction;
+#else
     glReadPixels(w/2, h/2, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &cursordepth);
     vec screen(0, 0, depthcorrect(cursordepth)*2 - 1);
     vec4 world;
     invmvpmatrix.transform(screen, world);
     pos = vec(world.x, world.y, world.z).div(world.w);
     intersectgeometry(camera1->o, pos);
+#endif
 }
 
 VARP(ignoreoverride_nowaterreflect, 0, 0, 1);
@@ -1021,11 +1200,30 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     extern int mapoverride_nostencilshadows, mapoverride_nowaterreflect;
     effective_stencilshadow = mapoverride_nostencilshadows && !ignoreoverride_nostencilshadows ? 0 : stencilshadow;
     bool effective_waterreflect = waterreflect && !editmode && (!mapoverride_nowaterreflect || ignoreoverride_nowaterreflect);
+#if defined(AC_PLATFORM_IOS)
+    // The legacy reflection path renders the scene recursively into auxiliary
+    // buffers and is not required for the first playable scene. Disable it on
+    // iOS while bringing up the GLES renderer; water is drawn without reflection.
+    effective_waterreflect = false;
+#endif
 
+#if defined(AC_PLATFORM_IOS)
+    extern void iosstartup_log(const char *message);
+    iosstartup_log("frame: gl_drawframe entered");
+#endif
     dodynlights();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: dynamic lights complete");
+#endif
     drawminimap(w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: minimap complete");
+#endif
 
     recomputecamera();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: camera recomputed");
+#endif
 
     aspect = float(w)/h;
     fovy = 2*atan2(tan(float(dynfov())/2*RAD), aspect)/RAD;
@@ -1058,6 +1256,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
 
     transplayer();
     readmatrices();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: matrices loaded");
+#endif
 
     if(!underwater && effective_waterreflect)
     {
@@ -1067,6 +1268,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
             if(reflectscissor) calcwaterscissor();
             drawreflection(hf, w, h, changelod, false);
             if(waterrefract) drawreflection(hf, w, h, changelod, true);
+#if defined(AC_PLATFORM_IOS)
+        iosstartup_log("frame: water reflections complete");
+#endif
         }
     }
 
@@ -1076,9 +1280,15 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     glEnable(GL_TEXTURE_2D);
 
     resetcubes();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: cube reset complete");
+#endif
 
     render_world(camera1->o.x, camera1->o.y, camera1->o.z, changelod,
             (int)camera1->yaw, (int)camera1->pitch, dynfov(), fovy, w, h);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: world rendering complete");
+#endif
 
     setupstrips();
 
@@ -1108,6 +1318,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     startmodelbatches();
     rendermapmodels();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: map models complete");
+#endif
 
     if(effective_stencilshadow && hasstencil && stencilbits >= 8) drawstencilshadows();
 
@@ -1116,19 +1329,31 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     endmodelbatches();
 
     readdepth(w, h, worldpos);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: depth read complete");
+#endif
 
     startmodelbatches();
     renderclients();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: clients rendered");
+#endif
 
     startmodelbatches();
     renderentities();
     renderbounceents();
     endmodelbatches();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: entities rendered");
+#endif
 
     WaypointClass.Think();// Rick: Need to do here because of drawing the waypoints
     
     drawhudgun();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: HUD gun complete");
+#endif
 
     resettmu(0);
 
@@ -1137,6 +1362,9 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
     render_particles(curtime, PT_DECAL_MASK);
 
     int nquads = renderwater(hf, !effective_waterreflect || underwater ? 0 : reflecttex, !effective_waterreflect || !waterrefract || underwater ? 0 : refracttex);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: water rendering complete");
+#endif
 
     render_particles(curtime, ~PT_DECAL_MASK);
 
@@ -1159,10 +1387,16 @@ void gl_drawframe(int w, int h, float changelod, float curfps, int elapsed)
 
     extern vector<vertex> verts;
     gl_drawhud(w, h, int(curfps + 0.5f), nquads, verts.length(), underwater, elapsed);
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: HUD complete");
+#endif
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_FOG);
 
     undodynlights();
+#if defined(AC_PLATFORM_IOS)
+    iosstartup_log("frame: dynamic lights restored; drawframe complete");
+#endif
 }
 

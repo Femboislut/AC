@@ -1,0 +1,149 @@
+name: AssaultCube
+options:
+  bundleIdPrefix: net.cubers
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  AssaultCubeData:
+    path: AssaultCubeData
+
+targets:
+  AssaultCubeSDLTest:
+    type: application
+    platform: iOS
+    sources:
+      - path: AssaultCubeSDLTest/main.c
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.sdltest
+        PRODUCT_NAME: AssaultCubeSDLTest
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: "AC SDL Test"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/package/SDL2/include"
+          - "$(SRCROOT)/../build/package/SDL2/include/SDL2"
+          - "$(SRCROOT)/../build/package/GL4ES/include"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2main.a"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2.a"
+          - "$(SRCROOT)/../build/package/GL4ES/libGL.a"
+          - "-framework"
+          - UIKit
+          - "-framework"
+          - CoreBluetooth
+          - "-framework"
+          - Foundation
+          - "-framework"
+          - CoreGraphics
+          - "-framework"
+          - QuartzCore
+          - "-framework"
+          - CoreAudio
+          - "-framework"
+          - AudioToolbox
+          - "-framework"
+          - AVFoundation
+          - "-framework"
+          - CoreMotion
+          - "-framework"
+          - CoreVideo
+          - "-framework"
+          - OpenGLES
+          - "-framework"
+          - Metal
+          - "-weak_framework"
+          - GameController
+          - "-weak_framework"
+          - CoreHaptics
+        CODE_SIGNING_ALLOWED: "NO"
+
+  AssaultCubeGame:
+    type: application
+    platform: iOS
+    sources:
+      - path: AssaultCubeGame/BootstrapAnchor.m
+      - path: AssaultCubeGame/IOSGameDataBootstrap.swift
+      - path: AssaultCubeGame/KeyboardOverlay.swift
+      - path: AssaultCubeApp/Assets.xcassets
+    resources:
+      - path: NSISExtractor/LICENSE
+      - path: NSISExtractor/NOTICE
+      - path: AssaultCubeApp/MobileConfig/menus_settings.cfg
+    dependencies:
+      - package: AssaultCubeData
+    info:
+      path: AssaultCubeApp/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.cubers.assaultcube.ios
+        PRODUCT_NAME: AssaultCube
+        INFOPLIST_KEY_CFBundleDisplayName: "AssaultCube"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/package/SDL2/include"
+          - "$(SRCROOT)/../build/package/SDL2/include/SDL2"
+          - "$(SRCROOT)/../build/package/SDL2_image/include"
+          - "$(SRCROOT)/../build/package/GL4ES/include"
+          - "$(SRCROOT)/../build/package/Audio/include"
+          - "$(SRCROOT)/../source/src"
+          - "$(SRCROOT)/../source/enet/include"
+          - "$(SRCROOT)/NSISExtractor/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/../build/nsis-target/aarch64-apple-ios/release"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2main.a"
+          - "$(SRCROOT)/../build/package/Engine/lib/libAssaultCubeEngine.a"
+          - "$(SRCROOT)/../build/package/Engine/lib/libAC_ENET.a"
+          - "$(SRCROOT)/../build/package/SDL2/lib/libSDL2.a"
+          - "$(SRCROOT)/../build/package/SDL2_image/lib/libSDL2_image.a"
+          - "$(SRCROOT)/../build/package/GL4ES/libGL.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libvorbisfile.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libvorbis.a"
+          - "$(SRCROOT)/../build/package/Audio/lib/libogg.a"
+          - "-lac_nsis_extractor"
+          - "-lc++"
+          - "-lz"
+          - "-framework"
+          - UIKit
+          - "-framework"
+          - CoreBluetooth
+          - "-framework"
+          - Foundation
+          - "-framework"
+          - CoreGraphics
+          - "-framework"
+          - QuartzCore
+          - "-framework"
+          - CoreAudio
+          - "-framework"
+          - AudioToolbox
+          - "-framework"
+          - AVFoundation
+          - "-framework"
+          - CoreMotion
+          - "-framework"
+          - CoreVideo
+          - "-framework"
+          - OpenGLES
+          - "-framework"
+          - Metal
+          - "-framework"
+          - OpenAL
+          - "-weak_framework"
+          - GameController
+          - "-weak_framework"
+          - CoreHaptics

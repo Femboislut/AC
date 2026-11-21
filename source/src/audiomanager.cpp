@@ -1,6 +1,12 @@
 // audio interface of the engine
 
 #include "cube.h"
+#if defined(AC_PLATFORM_IOS)
+// iOS startup diagnostics are intentionally disabled; do not introduce a link dependency.
+#define IOS_AUDIO_LOG(message) ((void)0)
+#else
+#define IOS_AUDIO_LOG(message) ((void)0)
+#endif
 
 #define DEBUGCOND (audiodebug==1)
 
@@ -581,20 +587,42 @@ VARP(heartbeat, 0, 0, 99);
 void audiomanager::updateaudio()
 {
     if(nosound) return;
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: update entered with audio enabled");
+    if(!context || !device)
+    {
+        IOS_AUDIO_LOG("audio: invalid OpenAL context/device; disabling audio");
+        nosound = true;
+        return;
+    }
+#endif
 
     alcSuspendContext(context); // don't process sounds while we mess around
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: context suspended");
+#endif
 
     bool alive = player1->state==CS_ALIVE;
     bool firstperson = camera1==player1 || (player1->isspectating() && player1->spectatemode==SM_DEATHCAM);
 
     // footsteps
     updateplayerfootsteps(player1);
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: local footsteps updated");
+#endif
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: before remote footsteps");
+#endif
     loopv(players)
     {
         playerent *p = players[i];
         if(!p) continue;
         updateplayerfootsteps(p);
     }
+
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: all footsteps updated");
+#endif
 
     // water
     bool underwater = /*alive &&*/ firstperson && waterlevel > player1->o.z + player1->aboveeye;
@@ -607,6 +635,10 @@ void audiomanager::updateaudio()
     // heartbeat
     bool heartbeatsound = heartbeat && alive && firstperson && !m_osok && player1->health <= heartbeat;
     updateloopsound(S_HEARTBEAT, heartbeatsound);
+
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: tinnitus loop complete");
+#endif
 
     // pitch fx
     const float lowpitch = 0.65f;
@@ -622,6 +654,10 @@ void audiomanager::updateaudio()
         currentpitch = 1.0f;
         locations.forcepitch(currentpitch);
     }
+
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: pitch effects complete");
+#endif
 
     // update map sounds
     static int lastmapsound = 0;
@@ -653,10 +689,20 @@ void audiomanager::updateaudio()
         lastmapsound = totalmillis;
     }
 
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: map sounds complete");
+#endif
+
     // update all sound locations
     locations.updatelocations();
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: sound locations updated");
+#endif
 
     // update background music
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: before background music update");
+#endif
     if(gamemusic)
     {
         if(!gamemusic->update())
@@ -674,6 +720,10 @@ void audiomanager::updateaudio()
         }
     }
 
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: background music update complete");
+#endif
+
     // listener
     vec o[2];
     o[0].x = (float)(cosf(RAD*(camera1->yaw-90)));
@@ -685,6 +735,9 @@ void audiomanager::updateaudio()
     alListenerfv(AL_POSITION, (ALfloat *) &camera1->o);
 
     alcProcessContext(context);
+#if defined(AC_PLATFORM_IOS)
+    IOS_AUDIO_LOG("audio: context processed; update complete");
+#endif
 }
 
 // binding of sounds to the 3D world
