@@ -663,6 +663,12 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
     int winh = fullscreen && fullscreendesktop ? desktoph : scr_h;
 
     int flags = SDL_WINDOW_RESIZABLE;
+#if defined(AC_PLATFORM_IOS)
+    // Request Retina backing pixels. Without this SDL's UIKit OpenGL view
+    // defaults to point-sized rendering (896x414 on iPhone 11), which is then
+    // stretched to the physical display and makes the entire game blurry.
+    flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
     if(fullscreen) flags |= fullscreendesktop ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
 
     static int configs[] =
