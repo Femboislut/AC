@@ -469,6 +469,8 @@ private enum ACKeyboardOverlay {
     static var hudScale: CGFloat = 1
     static var gyroEnabled = false
     static var gyroSensitivity: Double = 1
+    static var gyroInvertX = false
+    static var gyroInvertY = true
 
     static func update(enabled: Bool, inputActive: Bool, visible: Bool,
                        x: CGFloat, y: CGFloat, size: CGFloat) {
