@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - master
       - ios/port-build-infra
     paths:
       - 'ios/Engine/**'
@@ -346,12 +347,12 @@ jobs:
         with:
           tag_name: ios-ipa-${{ github.run_number }}-${{ github.run_attempt }}
           name: AssaultCube iOS build ${{ github.run_number }}
-          prerelease: true
+          prerelease: ${{ github.ref != 'refs/heads/master' }}
           generate_release_notes: false
           body: |
-            Direct IPA download for LiveContainer / compatible sideloading workflows.
-            This is the only installable IPA published by this workflow.
-            The IPA is not wrapped in a GitHub Actions artifact ZIP.
+            Direct IPA download for compatible sideloading workflows.
+            Development-branch builds are prereleases; master builds are stable releases.
+            This IPA is not wrapped in a GitHub Actions artifact ZIP.
           files: AssaultCube-iOS-Game.ipa
       - name: Upload engine diagnostics
         if: always()
