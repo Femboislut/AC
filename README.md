@@ -1,42 +1,58 @@
-# AssaultCube iOS Port (Experimental)
+# AssaultCube iOS Port
 
-An independent iOS porting effort for [AssaultCube](https://assault.cubers.net/), based on the upstream [AssaultCube source repository](https://github.com/assaultcube/AC).
+An independent iOS port of [AssaultCube](https://assault.cubers.net/), based on the upstream [AssaultCube source](https://github.com/assaultcube/AC).
 
-> **Status: experimental / not yet confirmed playable.** This repository has verified game-data import on an iPhone and builds native iOS dependencies and engine code in CI. The current game-app target is still being brought up; no gameplay, gyro, touch layout, audio, or multiplayer feature is claimed verified on-device yet.
+**Status:** Functional and device-tested by the maintainer. The current build has been reported stable on an iPhone 11. It remains an experimental community port because device coverage, signing/install paths, and long-term compatibility have not been independently tested across the full iOS device range.
 
-## Project goals
+## Download
 
-- Native ARM64 iOS game runtime using SDL2 and GL4ES.
-- Import game data from the official Windows installer without executing Windows binaries.
-- Touch controls designed for phones, with editable layouts and multitouch.
-- Optional gyroscope aiming, including calibration, sensitivity, and independent axis inversion.
-- Bluetooth game-controller support and configurable bindings.
-- Accessible in-game settings for graphics, controls, audio, HUD, and gameplay.
-- Multiplayer server browser, favourites, direct-connect and reconnect UX where supported by the engine.
+- **[Download the latest stable IPA](https://github.com/TangiDev69/Assaultcube-ios-port/releases/latest/download/AssaultCube-iOS-Game.ipa)**
+- [All releases](https://github.com/TangiDev69/Assaultcube-ios-port/releases)
+- [Latest successful iOS build (CI)](https://github.com/TangiDev69/Assaultcube-ios-port/actions)
 
-These are project goals; features become “implemented” only after build and device testing.
+The IPA is unsigned and intended for compatible sideloading workflows such as LiveContainer. This is not an App Store release.
 
-## Current verified milestone
+## Features
 
-- **Game-data importer tested on iPhone:** validates 1,829 files (~49 MB) imported from the Windows installer.
-- **Native dependency CI:** SDL2, GL4ES, Ogg/Vorbis, ENet and engine source have been built as ARM64 libraries in earlier successful runs.
-- **Current game IPA build:** in active development. The last build failed at the app link step because SDL Bluetooth HID symbols were missing the CoreBluetooth framework. The link configuration has been corrected; the follow-up build is pending.
+- Native iOS application shell and ARM64 engine build.
+- Game-data import from the official Windows installer; the installer is parsed/extracted, not executed.
+- Touch HUD with movement, aiming, fire, jump, crouch, reload and weapon controls.
+- Adjustable and movable on-screen controls.
+- Gyroscope aiming with sensitivity and independent axis inversion.
+- Touch/menu navigation and keyboard/text-entry support.
+- Graphics, audio, gameplay and mobile settings.
+- Multiplayer connectivity and in-game authentication.
 
-See [iOS development status and build notes](ios/README.md).
+The maintainer reports these features working in the current iPhone 11 build; compatibility and performance may vary on other devices.
 
-## Testing builds
+## Resolution
 
-Open [GitHub Actions](https://github.com/TangiDev69/AC/actions), select the **iOS ARM64 dependency build** workflow, and open a successful run's artifacts. Artifacts are CI test builds, not official releases, until a tested IPA is published under [Releases](https://github.com/TangiDev69/AC/releases).
+The app requests a high-DPI drawable and uses the device's available native pixel dimensions automatically. It does **not** hardcode the iPhone 11 resolution. A manual render-resolution / render-scale selector is not currently provided.
 
-## Importing game data on iPhone
+## Install and import game data
 
-1. Keep the official AssaultCube Windows installer `.exe` in Files.
-2. Long-press it and choose **Share**.
-3. Share to the AssaultCube importer (or share to LiveContainer, then open the importer there).
-4. Complete the import and confirm that it reports valid game data.
+1. Download the IPA from the **latest stable release** above.
+2. Install/open it using a compatible sideloading method (for example, LiveContainer).
+3. Obtain the official AssaultCube Windows installer from the [official downloads page](https://assault.cubers.net/download.html) and keep the `.exe` in Files.
+4. Use the app's import flow to select the installer and extract the game data.
+5. Launch the game.
 
-The importer extracts game assets only; it does not run the Windows installer or Windows executable code.
+The port extracts game assets from the installer without running Windows installer code. The game data is not bundled in this repository or the IPA.
 
-## Upstream project and licensing
+## Building
 
-AssaultCube is an upstream project. This repository is an independent iOS porting fork, not an official release. Preserve upstream notices and licenses; review the applicable upstream license before redistributing binaries or game data.
+The reproducible iOS build is defined in [GitHub Actions](.github/workflows/ios-dependencies-build.yml). It builds pinned SDL2, SDL2_image, Ogg/Vorbis, GL4ES, the AssaultCube engine, the native data extractor and the iOS app, then publishes an IPA.
+
+- Development-branch builds are published as prereleases.
+- Builds on `master` are published as stable releases (latest-release link).
+- Build logs and dependency artifacts are available from the Actions run.
+
+See [iOS development notes](ios/README.md) and [the engineering plan](ios/ENGINEERING_PLAN.md).
+
+## Credits and license
+
+- **Upstream:** AssaultCube project and contributors. See upstream notices and license files.
+- **Port maintainer:** TangiDev69.
+- **AI coding assistance:** Codex (OpenAI / ChatGPT), assisting with implementation, debugging, and documentation.
+
+This is an independent port, not an official AssaultCube release. Review the applicable upstream licenses before redistributing software or game assets.
